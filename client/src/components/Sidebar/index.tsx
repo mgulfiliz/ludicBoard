@@ -25,21 +25,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
+import CustomMenu from "../CustomComponents/CustomMenu";
 
 const Sidebar = () => {
   const [showProjects, setShowProjects] = useState(true);
   const [showPriority, setShowPriority] = useState(true);
-
+ 
   const { data: projects } = useGetProjectsQuery();
   const dispatch = useAppDispatch();
-  const isSidebarCollapsed = useAppSelector(
-    (state) => state.global.isSidebarCollapsed,
-  );
+  const isSidebarCollapsed = useAppSelector((state) => state.global.isSidebarCollapsed);
 
   const sidebarClassNames = `fixed flex flex-col h-[100%] justify-between shadow-xl
     transition-all duration-300 h-full z-40 dark:bg-black overflow-y-auto bg-white
-    ${isSidebarCollapsed ? "w-0 hidden" : "w-64"}
-  `;
+    ${isSidebarCollapsed ? "w-0 hidden" : "w-64"}`;
 
   return (
     <div className={sidebarClassNames}>
@@ -102,14 +100,17 @@ const Sidebar = () => {
         </button>
         {/* PROJECTS LIST */}
         {showProjects &&
-          projects?.map((project) => (
+        projects?.map((project) => (
+          <div key={project.id} className="flex items-center justify-between">
             <SidebarLink
               key={project.id}
               icon={Briefcase}
               label={project.name}
               href={`/projects/${project.id}`}
             />
-          ))}
+            <CustomMenu buttonLabel={null} />
+          </div>
+        ))}
 
         {/* PRIORITIES LINKS */}
         <button

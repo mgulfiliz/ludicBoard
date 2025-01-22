@@ -38,3 +38,27 @@ export const createProject = async (
       .json({ message: `Error creating a project: ${error.message}` });
   }
 };
+
+export const deleteProject = async (
+  req: Request, 
+  res: Response
+): Promise<void> => {
+  const { projectId } = req.params;
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.task.deleteMany({
+        where: { projectId: Number(projectId) },
+      });
+
+      await tx.project.delete({
+        where: { id: Number(projectId) },
+      });
+    });
+
+    res.status(200).json({ message: `Project ${projectId} and related content deleted successfully.` });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ message: `Error deleting project: ${error.message}` });
+  }
+};
