@@ -40,25 +40,27 @@ export const createProject = async (
 };
 
 export const deleteProject = async (
-  req: Request, 
+  req: Request,
   res: Response
 ): Promise<void> => {
-  const { projectId } = req.params;
-  try {
-    await prisma.$transaction(async (tx) => {
-      await tx.task.deleteMany({
-        where: { projectId: Number(projectId) },
-      });
+  const { id } = req.params;
 
-      await tx.project.delete({
-        where: { id: Number(projectId) },
-      });
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: parseInt(id, 10) },
     });
 
-    res.status(200).json({ message: `Project ${projectId} and related content deleted successfully.` });
+    if (!project) {
+      res.status(404).json({ message: "Project not found." });
+      return;
+    }
+
+    await prisma.project.delete({
+      where: { id: parseInt(id, 10) },
+    });
+
+    res.status(200).json({ message: "Project deleted successfully." });
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error deleting project: ${error.message}` });
+    res.status(500).json({ message: `Error deleting project: ${error.message}` });
   }
 };

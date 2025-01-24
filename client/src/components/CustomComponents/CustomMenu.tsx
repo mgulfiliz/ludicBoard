@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { styled, alpha } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import Menu, { MenuProps } from '@mui/material/Menu';
@@ -7,8 +7,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import Divider from '@mui/material/Divider';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 
 const StyledMenu = styled((props: MenuProps) => (
   <Menu
@@ -55,9 +55,10 @@ const StyledMenu = styled((props: MenuProps) => (
 
 interface CustomMenuProps {
   buttonLabel: string | null;
+  projectId: string;
 }
 
-const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }) => {
+const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }: CustomMenuProps) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -67,8 +68,9 @@ const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }) => {
 
   const handleClose = () => {
     setAnchorEl(null);
-  };
 
+  
+  };
   return (
     <div>
       <Button
@@ -106,8 +108,8 @@ const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }) => {
           Archive
         </MenuItem>
         <MenuItem onClick={handleClose} disableRipple>
-          <MoreHorizIcon />
-          More
+          <DeleteForeverIcon />
+          Delete
         </MenuItem>
       </StyledMenu>
     </div>
