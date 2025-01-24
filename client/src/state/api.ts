@@ -123,10 +123,10 @@ export const api = createApi({
     deleteTask: build.mutation<void, { taskId: number }>({
       query: ({ taskId }) => ({
         url: `tasks/${taskId}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Tasks'],
-    }),  
+      invalidatesTags: ["Tasks"],
+    }), 
     updateTaskStatus: build.mutation<Task, { taskId: number; status: string }>({
       query: ({ taskId, status }) => ({
         url: `tasks/${taskId}/status`,

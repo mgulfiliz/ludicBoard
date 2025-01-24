@@ -112,3 +112,17 @@ export const getUserTasks = async (
       .json({ message: `Error retrieving user's tasks: ${error.message}` });
   }
 };
+
+export const deleteTask = async (req: Request, res: Response): Promise<void> => {
+  const { taskId } = req.params;
+  try {
+    await prisma.task.delete({
+      where: {
+        id: Number(taskId),
+      },
+    });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: `Error deleting task: ${error.message}` });
+  }
+};

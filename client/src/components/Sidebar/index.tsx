@@ -108,7 +108,7 @@ const Sidebar = () => {
               label={project.name}
               href={`/projects/${project.id}`}
             />
-            <CustomMenu buttonLabel={null} projectId={""} />
+            <CustomMenu buttonLabel={null} projectId={project.id.toString()} />
           </div>
         ))}
 

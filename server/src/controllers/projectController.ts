@@ -43,11 +43,11 @@ export const deleteProject = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { id } = req.params;
+  const { projectId } = req.params;
 
   try {
     const project = await prisma.project.findUnique({
-      where: { id: parseInt(id, 10) },
+      where: { id: parseInt(projectId, 10) },
     });
 
     if (!project) {
@@ -56,7 +56,7 @@ export const deleteProject = async (
     }
 
     await prisma.project.delete({
-      where: { id: parseInt(id, 10) },
+      where: { id: parseInt(projectId, 10) },
     });
 
     res.status(200).json({ message: "Project deleted successfully." });

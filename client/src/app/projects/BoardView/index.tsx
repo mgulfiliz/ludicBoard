@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useGetTasksQuery, useUpdateTaskStatusMutation, } from "@/state/api";
+import { useGetTasksQuery, useUpdateTaskStatusMutation, useDeleteTaskMutation } from "@/state/api";
 import React from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -22,9 +22,16 @@ const BoardView = ({ id, setIsModalNewTaskOpen }: BoardProps) => {
     error,
   } = useGetTasksQuery({ projectId: Number(id) });
   const [updateTaskStatus] = useUpdateTaskStatusMutation();
+  const [deleteTask] = useDeleteTaskMutation();
 
   const moveTask = (taskId: number, toStatus: string) => {
     updateTaskStatus({ taskId, status: toStatus });
+  };
+
+  const handleDeleteTask = (taskId: number) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      deleteTask({ taskId });
+    }
   };
 
   if (isLoading) return <div>Loading...</div>;
@@ -40,6 +47,7 @@ const BoardView = ({ id, setIsModalNewTaskOpen }: BoardProps) => {
             tasks={tasks || []}
             moveTask={moveTask}
             setIsModalNewTaskOpen={setIsModalNewTaskOpen}
+            handleDeleteTask={handleDeleteTask}
           />
         ))}
       </div>
@@ -52,6 +60,7 @@ type TaskColumnProps = {
   tasks: TaskType[];
   moveTask: (taskId: number, toStatus: string) => void;
   setIsModalNewTaskOpen: (isOpen: boolean) => void;
+  handleDeleteTask: (taskId: number) => void;
 };
 
 const TaskColumn = ({
@@ -59,6 +68,7 @@ const TaskColumn = ({
   tasks,
   moveTask,
   setIsModalNewTaskOpen,
+  handleDeleteTask,
 }: TaskColumnProps) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "task",
@@ -100,7 +110,7 @@ const TaskColumn = ({
             </span>
           </h3>
           <div className="flex items-center gap-1">
-            <button className="flex h-6 w-5 items-center justify-center dark:text-neutral-500">
+          <button className="flex h-6 w-5 items-center justify-center dark:text-neutral-500">
               <EllipsisVertical size={26} />
             </button>
             <button
@@ -116,7 +126,7 @@ const TaskColumn = ({
       {tasks
         .filter((task) => task.status === status)
         .map((task) => (
-          <Task key={task.id} task={task} />
+          <Task key={task.id} task={task} handleDeleteTask={handleDeleteTask} />
         ))}
     </div>
   );
@@ -124,9 +134,10 @@ const TaskColumn = ({
 
 type TaskProps = {
   task: TaskType;
+  handleDeleteTask: (taskId: number) => void;
 };
 
-const Task = ({ task }: TaskProps) => {
+const Task = ({ task, handleDeleteTask }: TaskProps) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "task",
     item: { id: task.id },
@@ -152,12 +163,12 @@ const Task = ({ task }: TaskProps) => {
         priority === "Urgent"
           ? "bg-red-200 text-red-700"
           : priority === "High"
-            ? "bg-yellow-200 text-yellow-700"
-            : priority === "Medium"
-              ? "bg-green-200 text-green-700"
-              : priority === "Low"
-                ? "bg-blue-200 text-blue-700"
-                : "bg-gray-200 text-gray-700"
+          ? "bg-yellow-200 text-yellow-700"
+          : priority === "Medium"
+          ? "bg-green-200 text-green-700"
+          : priority === "Low"
+          ? "bg-blue-200 text-blue-700"
+          : "bg-gray-200 text-gray-700"
       }`}
     >
       {priority}
@@ -198,7 +209,10 @@ const Task = ({ task }: TaskProps) => {
               ))}
             </div>
           </div>
-          <button className="flex h-6 w-4 flex-shrink-0 items-center justify-center dark:text-neutral-500">
+          <button
+            className="flex h-6 w-4 flex-shrink-0 items-center justify-center dark:text-neutral-500"
+            onClick={() => handleDeleteTask(task.id)}
+          >
             <EllipsisVertical size={26} />
           </button>
         </div>

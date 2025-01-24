@@ -22,32 +22,37 @@ const ModalNewTask = ({ isOpen, onClose, id = null }: Props) => {
   const [assignedUserId, setAssignedUserId] = useState("");
   const [projectId, setProjectId] = useState("");
 
-  const handleSubmit = async () => {
-    if (!title || !authorUserId || !(id !== null || projectId)) return;
-
-    const formattedStartDate = formatISO(new Date(startDate), {
-      representation: "complete",
-    });
-    const formattedDueDate = formatISO(new Date(dueDate), {
-      representation: "complete",
-    });
-
-    await createTask({
-      title,
-      description,
-      status,
-      priority,
-      tags,
-      startDate: formattedStartDate,
-      dueDate: formattedDueDate,
-      authorUserId: parseInt(authorUserId),
-      assignedUserId: parseInt(assignedUserId),
-      projectId: id !== null ? Number(id) : Number(projectId),
-    });
-  };
-
   const isFormValid = () => {
-    return title && authorUserId && !(id !== null || projectId);
+    return title && authorUserId && (id !== null || projectId);
+  };
+  
+  const handleSubmit = async () => {
+    if (!title || !authorUserId || (id === null && !projectId)) return;
+  
+    const formattedStartDate = startDate
+      ? formatISO(new Date(startDate), { representation: "complete" })
+      : undefined;
+    const formattedDueDate = dueDate
+      ? formatISO(new Date(dueDate), { representation: "complete" })
+      : undefined;
+  
+    try {
+      await createTask({
+        title,
+        description,
+        status,
+        priority,
+        tags,
+        startDate: formattedStartDate,
+        dueDate: formattedDueDate,
+        authorUserId: authorUserId ? parseInt(authorUserId, 10) : undefined,
+        assignedUserId: assignedUserId ? parseInt(assignedUserId, 10) : undefined,
+        projectId: id !== null ? Number(id) : Number(projectId),
+      });
+      onClose();
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    }
   };
 
   const selectStyles =

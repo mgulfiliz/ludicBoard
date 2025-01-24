@@ -9,6 +9,7 @@ import ArchiveIcon from '@mui/icons-material/Archive';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import { useDeleteProjectMutation } from '@/state/api';
 
 const StyledMenu = styled((props: MenuProps) => (
   <Menu
@@ -58,9 +59,10 @@ interface CustomMenuProps {
   projectId: string;
 }
 
-const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }: CustomMenuProps) => {
+const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel, projectId }: CustomMenuProps) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const [deleteProjectMutation] = useDeleteProjectMutation();
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -68,9 +70,22 @@ const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }: CustomMenuProps)
 
   const handleClose = () => {
     setAnchorEl(null);
-
-  
   };
+
+  const handleDelete = async () => {
+    try {
+      const response = await deleteProjectMutation({ projectId: Number(projectId) });
+
+      if (response.error) {
+        console.error("Failed to delete project");
+      } else {
+        console.log("Project deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error);
+    }
+  };
+
   return (
     <div>
       <Button
@@ -107,7 +122,7 @@ const CustomMenu: React.FC<CustomMenuProps> = ({ buttonLabel }: CustomMenuProps)
           <ArchiveIcon />
           Archive
         </MenuItem>
-        <MenuItem onClick={handleClose} disableRipple>
+        <MenuItem onClick={handleDelete} disableRipple>
           <DeleteForeverIcon />
           Delete
         </MenuItem>
