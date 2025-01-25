@@ -2,6 +2,7 @@ import Modal from "@/components/Modal";
 import { Priority, Status, useCreateTaskMutation } from "@/state/api";
 import React, { useState } from "react";
 import { formatISO } from "date-fns";
+import UserSelectChip from "@/components/CustomComponents/UserSelectChip"
 
 type Props = {
   isOpen: boolean;
@@ -134,19 +135,15 @@ const ModalNewTask = ({ isOpen, onClose, id = null }: Props) => {
             onChange={(e) => setDueDate(e.target.value)}
           />
         </div>
-        <input
-          type="text"
-          className={inputStyles}
-          placeholder="Author User ID"
-          value={authorUserId}
-          onChange={(e) => setAuthorUserId(e.target.value)}
+        <UserSelectChip
+          assignedUserId={authorUserId}
+          setAssignedUserId={setAuthorUserId}
+          label="Select Author"
         />
-        <input
-          type="text"
-          className={inputStyles}
-          placeholder="Assigned User ID"
-          value={assignedUserId}
-          onChange={(e) => setAssignedUserId(e.target.value)}
+        <UserSelectChip
+          assignedUserId={assignedUserId}
+          setAssignedUserId={setAssignedUserId}
+          label="Select Team Members"
         />
         {id === null && (
           <input
