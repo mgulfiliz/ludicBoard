@@ -49,7 +49,13 @@ export default function AssignedUserSelect({
     } = event;
 
     const selectedUserIds = typeof value === "string" ? value.split(",") : value;
-    setAssignedUserId(selectedUserIds.join(","));
+
+    const newSelectedIds = selectedUserIds.filter((id) => {
+      const idNumber = Number(id);
+      return !selectedIds.includes(idNumber);
+    });
+
+    setAssignedUserId(newSelectedIds.join(","));
   };
 
   if (isLoading) return <div>Loading users...</div>;
@@ -98,7 +104,7 @@ export default function AssignedUserSelect({
             key={user.userId}
             value={user.userId}
             style={{
-              fontWeight: selectedIds.includes(user.userId!)
+              fontWeight: selectedIds.includes(user.userId)
                 ? theme.typography.fontWeightMedium
                 : theme.typography.fontWeightRegular,
             }}

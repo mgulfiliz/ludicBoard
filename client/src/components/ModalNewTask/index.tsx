@@ -2,7 +2,7 @@ import Modal from "@/components/Modal";
 import { Priority, Status, useCreateTaskMutation } from "@/state/api";
 import React, { useState } from "react";
 import { formatISO } from "date-fns";
-import UserSelectChip from "@/components/CustomComponents/UserSelectChip"
+import UserSelectChip from "@/components/CustomComponents/AssignedUserSelect"
 
 type Props = {
   isOpen: boolean;
