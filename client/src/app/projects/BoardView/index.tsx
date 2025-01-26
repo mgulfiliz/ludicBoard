@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useGetTasksQuery, useUpdateTaskStatusMutation, useDeleteTaskMutation } from "@/state/api";
 import React, { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Task as TaskType } from "@/state/api";
-import TaskColumn from "./TaskColumn"; // Ensure correct import path
-import EditTaskModal from "./EditTaskModal"; // Ensure correct import path
+import TaskColumn from "./TaskColumn";
+import EditTaskModal from "./EditTaskModal";
 
 type BoardProps = {
   id: string;
