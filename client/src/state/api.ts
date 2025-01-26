@@ -47,8 +47,8 @@ export interface Task {
   status?: Status;
   priority?: Priority;
   tags?: string;
-  startDate?: string;
-  dueDate?: string;
+  startDate?: string | null;
+  dueDate?: string | null;
   points?: number;
   projectId: number;
   authorUserId?: number;
@@ -120,6 +120,14 @@ export const api = createApi({
       }),
       invalidatesTags: ["Tasks"],
     }),
+    updateTask: build.mutation<Task, Partial<Task>>({
+      query: (task) => ({
+        url: `tasks/${task.id}`,
+        method: "PATCH",
+        body: task,
+      }),
+      invalidatesTags: ["Tasks"],
+    }),
     deleteTask: build.mutation<void, { taskId: number }>({
       query: ({ taskId }) => ({
         url: `tasks/${taskId}`,
@@ -158,6 +166,7 @@ export const {
   useGetTasksQuery,
   useCreateTaskMutation,
   useDeleteTaskMutation,
+  useUpdateTaskMutation,
   useUpdateTaskStatusMutation,
   useSearchQuery,
   useGetUsersQuery,

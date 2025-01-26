@@ -19,16 +19,11 @@ export const getTasks = async (req: Request, res: Response): Promise<void> => {
     });
     res.json(tasks);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error retrieving tasks: ${error.message}` });
+    res.status(500).json({ message: `Error retrieving tasks: ${error.message}` });
   }
 };
 
-export const createTask = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const createTask = async (req: Request, res: Response): Promise<void> => {
   const {
     title,
     description,
@@ -60,16 +55,50 @@ export const createTask = async (
     });
     res.status(201).json(newTask);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error creating a task: ${error.message}` });
+    res.status(500).json({ message: `Error creating a task: ${error.message}` });
   }
 };
 
-export const updateTaskStatus = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateTask = async (req: Request, res: Response): Promise<void> => {
+  const { taskId } = req.params;
+  const {
+    title,
+    description,
+    status,
+    priority,
+    tags,
+    startDate,
+    dueDate,
+    points,
+    authorUserId,
+    assignedUserId,
+  } = req.body;
+
+  try {
+    const updatedTask = await prisma.task.update({
+      where: {
+        id: Number(taskId),
+      },
+      data: {
+        title,
+        description,
+        status,
+        priority,
+        tags,
+        startDate,
+        dueDate,
+        points,
+        authorUserId,
+        assignedUserId,
+      },
+    });
+    res.json(updatedTask);
+  } catch (error: any) {
+    res.status(500).json({ message: `Error updating task: ${error.message}` });
+  }
+};
+
+export const updateTaskStatus = async (req: Request, res: Response): Promise<void> => {
   const { taskId } = req.params;
   const { status } = req.body;
   try {
@@ -87,10 +116,7 @@ export const updateTaskStatus = async (
   }
 };
 
-export const getUserTasks = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getUserTasks = async (req: Request, res: Response): Promise<void> => {
   const { userId } = req.params;
   try {
     const tasks = await prisma.task.findMany({
@@ -107,9 +133,7 @@ export const getUserTasks = async (
     });
     res.json(tasks);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error retrieving user's tasks: ${error.message}` });
+    res.status(500).json({ message: `Error retrieving user's tasks: ${error.message}` });
   }
 };
 
