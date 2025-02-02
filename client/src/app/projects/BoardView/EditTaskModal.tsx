@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   Modal,
-  Button,
-  TextField,
   Typography,
   Box,
-  Stack,
 } from "@mui/material";
 import AssignedUserSelect from "@/components/CustomComponents/AssignedUserSelect";
 import { useUpdateTaskMutation } from "@/state/api";
@@ -26,7 +23,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
   const [assignedUserId, setAssignedUserId] = useState<string>("");
   const [authorUserId, setAuthorUserId] = useState<string>("");
 
-  const [updateTask] = useUpdateTaskMutation();
+  const [updateTask, { isLoading }] = useUpdateTaskMutation();
 
   useEffect(() => {
     if (task) {
@@ -39,7 +36,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
     }
   }, [task]);
 
+  const isFormValid = () => {
+    return title && authorUserId;
+  };
+
   const handleSubmit = async () => {
+    if (!isFormValid()) return;
+
     const formattedStartDate = startDate
       ? formatISO(new Date(startDate), { representation: "complete" })
       : undefined;
@@ -47,89 +50,120 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
       ? formatISO(new Date(dueDate), { representation: "complete" })
       : undefined;
 
-    await updateTask({
-      id: task?.id,
-      title,
-      description,
-      startDate: formattedStartDate,
-      dueDate: formattedDueDate,
-      assignedUserId: assignedUserId ? parseInt(assignedUserId, 10) : undefined,
-      authorUserId: authorUserId ? parseInt(authorUserId, 10) : undefined,
-    });
-    onClose();
+    try {
+      await updateTask({
+        id: task?.id,
+        title,
+        description,
+        startDate: formattedStartDate,
+        dueDate: formattedDueDate,
+        assignedUserId: assignedUserId ? parseInt(assignedUserId, 10) : undefined,
+        authorUserId: authorUserId ? parseInt(authorUserId, 10) : undefined,
+      });
+      onClose();
+    } catch (error) {
+      console.error("Failed to update task:", error);
+    }
   };
 
+  const inputStyles = 
+    "w-full rounded border border-gray-300 p-2 shadow-sm dark:border-dark-tertiary dark:bg-dark-tertiary dark:text-white dark:focus:outline-none";
+
+  const selectStyles =
+    "mb-4 block w-full rounded border-none px-3 py-2 bg-transparent dark:bg-transparent dark:text-white";
+
   return (
-    <Modal open={open} onClose={onClose} aria-labelledby="edit-task-modal">
+    <Modal 
+      open={open} 
+      onClose={onClose} 
+      aria-labelledby="edit-task-modal"
+      className="flex items-center justify-center"
+    >
       <Box
-        className="p-6 rounded-2xl bg-white shadow-lg"
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-dark-secondary"
         sx={{
-          maxWidth: 500,
           margin: "auto",
           mt: 8,
         }}
       >
-        <Typography variant="h5" component="h2" gutterBottom>
+        <Typography 
+          variant="h5" 
+          component="h2" 
+          className="mb-4 text-center text-gray-800 dark:text-white"
+        >
           Edit Task
         </Typography>
 
-        <Stack spacing={3}>
-          <TextField
-            label="Title"
+        <form 
+          className="mt-4 space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          <input
+            type="text"
+            className={inputStyles}
+            placeholder="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            fullWidth
           />
 
-          <TextField
-            label="Description"
+          <textarea
+            className={inputStyles}
+            placeholder="Description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            fullWidth
-            multiline
             rows={4}
           />
 
-          <TextField
-            label="Start Date"
-            type="date"
-            value={startDate?.split("T")[0] || ""}
-            onChange={(e) => setStartDate(e.target.value)}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-          />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-2">
+            <input
+              type="date"
+              className={inputStyles}
+              value={startDate?.split("T")[0] || ""}
+              onChange={(e) => setStartDate(e.target.value)}
+              placeholder="Start Date"
+            />
+            <input
+              type="date"
+              className={inputStyles}
+              value={dueDate?.split("T")[0] || ""}
+              onChange={(e) => setDueDate(e.target.value)}
+              placeholder="Due Date"
+            />
+          </div>
 
-          <TextField
-            label="Due Date"
-            type="date"
-            value={dueDate?.split("T")[0] || ""}
-            onChange={(e) => setDueDate(e.target.value)}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-          />
+          <div className="space-y-2">
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Select Author</label>
+            <AssignedUserSelect
+              assignedUserId={authorUserId}
+              setAssignedUserId={setAuthorUserId}
+              label="Select Author"
+              className={selectStyles}
+            />
+          </div>
 
-          <AssignedUserSelect
-            assignedUserId={assignedUserId}
-            setAssignedUserId={setAssignedUserId}
-            label="Select Assignee"
-          />
+          <div className="space-y-2">
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Select Team Members</label>
+            <AssignedUserSelect
+              assignedUserId={assignedUserId}
+              setAssignedUserId={setAssignedUserId}
+              label="Select Team Members"
+              className={selectStyles}
+            />
+          </div>
 
-          <AssignedUserSelect
-            assignedUserId={authorUserId}
-            setAssignedUserId={setAuthorUserId}
-            label="Select Author"
-          />
-        </Stack>
-
-        <Stack direction="row" spacing={2} justifyContent="flex-end" mt={3}>
-          <Button onClick={onClose} color="secondary" variant="outlined">
-            Cancel
-          </Button>
-
-          <Button onClick={handleSubmit} color="primary" variant="contained">
-            Update Task
-          </Button>
-        </Stack>
+          <button
+            type="submit"
+            className={`focus-offset-2 mt-4 flex w-full justify-center rounded-md border border-transparent bg-blue-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+              !isFormValid() || isLoading ? "cursor-not-allowed opacity-50" : ""
+            }`}
+            disabled={!isFormValid() || isLoading}
+          >
+            {isLoading ? "Updating..." : "Update Task"}
+          </button>
+        </form>
       </Box>
     </Modal>
   );

@@ -138,9 +138,11 @@ const Task = ({
         <div className="mt-4 border-t border-gray-200 dark:border-stroke-dark" />
 
         <div className="mt-3 flex items-center justify-between">
-          <div className="flex -space-x-[6px] overflow-hidden">
-            <UserAvatar user={task.assignee} />
+          <div className="flex items-center">
             <UserAvatar user={task.author} />
+            <div className="ml-2 flex -space-x-[6px] overflow-hidden">
+              <UserAvatar user={task.assignee} />
+            </div>
           </div>
           <div className="flex items-center text-gray-500 dark:text-neutral-500">
             <button 

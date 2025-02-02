@@ -14,12 +14,14 @@ interface Props {
   assignedUserId: string;
   setAssignedUserId: (value: string) => void;
   label?: string;
+  className?: string;
 }
 
 export default function AssignedUserSelect({
   assignedUserId,
   setAssignedUserId,
-  label = "Comment As"
+  label = "Comment As",
+  className,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { data: users, isLoading, isError } = useGetUsersQuery();
@@ -48,7 +50,7 @@ export default function AssignedUserSelect({
     : null;
 
   return (
-    <div className="relative w-full">
+    <div className={`relative w-full ${className}`}>
       {/* User Selection Trigger */}
       <button
         type="button"
@@ -56,12 +58,12 @@ export default function AssignedUserSelect({
         className="
           w-full flex items-center justify-between 
           px-4 py-3 
-          bg-gray-100 dark:bg-dark-secondary 
-          border border-transparent 
-          rounded-lg 
+          bg-white dark:bg-dark-tertiary
+          border border-[#e6e4e4] dark:border-stroke-dark
+          rounded-md 
           text-left 
           focus:outline-none 
-          focus:ring-2 focus:ring-blue-500
+          focus:ring-2 focus:ring-blue-primary
           transition-all duration-300
         "
       >
@@ -98,9 +100,9 @@ export default function AssignedUserSelect({
         <div 
           className="
             absolute z-50 top-full left-0 right-0 mt-1
-            bg-white dark:bg-dark-secondary 
-            border border-gray-200 dark:border-neutral-700
-            rounded-lg shadow-lg
+            bg-white dark:bg-dark-tertiary 
+            border-none
+            rounded-md shadow-lg
             max-h-60 overflow-y-auto
             divide-y divide-gray-100 dark:divide-neutral-700
           "
