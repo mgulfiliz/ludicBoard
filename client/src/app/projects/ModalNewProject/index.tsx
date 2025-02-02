@@ -1,4 +1,4 @@
-import Modal from "@/components/Modal";
+import FormModal from "@/components/FormModal";
 import { useCreateProjectMutation } from "@/state/api";
 import React, { useState } from "react";
 import { formatISO } from "date-fns";
@@ -15,8 +15,12 @@ const ModalNewProject = ({ isOpen, onClose }: Props) => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const isFormValid = () => {
+    return projectName && description && startDate && endDate;
+  };
+
   const handleSubmit = async () => {
-    if (!projectName || !startDate || !endDate) return;
+    if (!isFormValid()) return;
 
     const formattedStartDate = formatISO(new Date(startDate), {
       representation: "complete",
@@ -31,63 +35,63 @@ const ModalNewProject = ({ isOpen, onClose }: Props) => {
       startDate: formattedStartDate,
       endDate: formattedEndDate,
     });
-    onClose();
   };
 
-  const isFormValid = () => {
-    return projectName && description && startDate && endDate;
-  };
-
-  const inputStyles =
-    "w-full rounded border border-gray-300 p-2 shadow-sm dark:border-dark-tertiary dark:bg-dark-tertiary dark:text-white dark:focus:outline-none";
+  const inputStyles = "w-full rounded border border-gray-300 p-2 shadow-sm dark:border-dark-tertiary dark:bg-dark-tertiary dark:text-white";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} name="Create New Project">
-      <form
-        className="mt-4 space-y-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}
-      >
-        <input
-          type="text"
-          className={inputStyles}
-          placeholder="Project Name"
-          value={projectName}
-          onChange={(e) => setProjectName(e.target.value)}
-        />
-        <textarea
-          className={inputStyles}
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-2">
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create New Project"
+      onSubmit={handleSubmit}
+      isLoading={isLoading}
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Project Name</label>
           <input
-            type="date"
+            type="text"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
             className={inputStyles}
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <input
-            type="date"
-            className={inputStyles}
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            required
           />
         </div>
-        <button
-          type="submit"
-          className={`focus-offset-2 mt-4 flex w-full justify-center rounded-md border border-transparent bg-blue-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
-            !isFormValid() || isLoading ? "cursor-not-allowed opacity-50" : ""
-          }`}
-          disabled={!isFormValid() || isLoading}
-        >
-          {isLoading ? "Creating..." : "Create Project"}
-        </button>
-      </form>
-    </Modal>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className={inputStyles}
+            rows={3}
+            required
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={inputStyles}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={inputStyles}
+              required
+            />
+          </div>
+        </div>
+      </div>
+    </FormModal>
   );
 };
 

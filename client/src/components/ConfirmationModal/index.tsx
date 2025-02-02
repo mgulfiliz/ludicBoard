@@ -28,7 +28,10 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} name={title}>
       <div className="p-4">
-        <p className="mb-4 text-gray-700 dark:text-white">{message}</p>
+        <p 
+        className="mb-4 text-gray-700 dark:text-white"
+        aria-label={message}
+        >{message}</p>
         <div className="flex justify-end space-x-2">
           <button
             onClick={onClose}
