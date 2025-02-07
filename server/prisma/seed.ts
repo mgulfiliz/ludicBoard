@@ -20,6 +20,23 @@ async function deleteAllData(orderedFileNames: string[]) {
   }
 }
 
+async function resetSequences(modelNames: string[]) {
+  for (const modelName of modelNames) {
+    try {
+      await prisma.$executeRawUnsafe(`
+        SELECT setval(
+          pg_get_serial_sequence('"${modelName}"', 'id'), 
+          COALESCE((SELECT MAX(id)+1 FROM "${modelName}"), 1), 
+          false
+        )
+      `);
+      console.log(`Reset sequence for ${modelName}`);
+    } catch (error) {
+      console.error(`Error resetting sequence for ${modelName}:`, error);
+    }
+  }
+}
+
 async function main() {
   const dataDirectory = path.join(__dirname, "seedData");
 
@@ -34,8 +51,10 @@ async function main() {
     "taskAssignment.json",
   ];
 
+  // Delete existing data
   await deleteAllData(orderedFileNames);
 
+  // Seed data
   for (const fileName of orderedFileNames) {
     const filePath = path.join(dataDirectory, fileName);
     const jsonData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -44,13 +63,22 @@ async function main() {
 
     try {
       for (const data of jsonData) {
-        await model.create({ data });
+        // Destructure to remove id if present
+        const { id, ...dataWithoutId } = data;
+        await model.create({ data: dataWithoutId });
       }
       console.log(`Seeded ${modelName} with data from ${fileName}`);
     } catch (error) {
       console.error(`Error seeding data for ${modelName}:`, error);
     }
   }
+
+  // Reset sequences for all models
+  const modelNames = orderedFileNames.map(fileName => 
+    path.basename(fileName, path.extname(fileName)).charAt(0).toUpperCase() + 
+    path.basename(fileName, path.extname(fileName)).slice(1)
+  );
+  await resetSequences(modelNames);
 }
 
 main()
