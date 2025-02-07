@@ -28,6 +28,7 @@ export interface Project {
   description?: string;
   startDate?: string;
   endDate?: string;
+  createdAt?: string;
 }
 
 export interface Task {
@@ -65,4 +66,17 @@ export interface Comment {
   user?: User;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface SearchResults {
+  tasks?: Task[];
+  projects?: Project[];
+  users?: User[];
+}
+
+export interface Team {
+  teamId: number;
+  teamName: string;
+  productOwnerUserId?: number;
+  projectManagerUserId?: number;
 }

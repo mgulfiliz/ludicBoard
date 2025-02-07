@@ -1,8 +1,8 @@
 "use client";
 
 import { useAppSelector } from "@/app/redux";
-import Header from "@/components/Header";
-import { useGetProjectsQuery } from "@/state/api";
+import Header from "@/components/layout/Header";
+import { useGetProjectsQuery } from "@/lib/api/api";
 import { DisplayOption, Gantt, ViewMode } from "gantt-task-react";
 import React, { useMemo, useState, useEffect } from "react";
 
@@ -79,3 +79,4 @@ const Timeline = () => {
 };
 
 export default Timeline;
+

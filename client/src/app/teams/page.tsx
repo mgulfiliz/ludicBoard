@@ -1,8 +1,8 @@
 "use client";
-import { useGetTeamsQuery } from "@/state/api";
+import { useGetTeamsQuery } from "@/lib/api/api";
 import React from "react";
 import { useAppSelector } from "../redux";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import {
   DataGrid,
   GridColDef,
@@ -57,3 +57,4 @@ const Teams = () => {
 };
 
 export default Teams;
+

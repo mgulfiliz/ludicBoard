@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { useDrop } from "react-dnd";
-import { Task as TaskType } from "@/state/api";
-import Task from "./Task"; // Ensure correct import path
+import { Task as TaskType } from "@/types";
+import Task from "./Task";
 import { EllipsisVertical, Plus } from "lucide-react";
 
 type TaskColumnProps = {

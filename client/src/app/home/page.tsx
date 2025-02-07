@@ -6,11 +6,11 @@ import {
   Task,
   useGetProjectsQuery,
   useGetTasksQuery,
-} from "@/state/api";
-import React from "react";
+} from "@/lib/api/api";
+import React, { useState } from "react";
 import { useAppSelector } from "../redux";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import {
   Bar,
   BarChart,
@@ -25,6 +25,17 @@ import {
   YAxis,
 } from "recharts";
 import { dataGridClassNames, dataGridSxStyles } from "@/lib/utils";
+import { 
+  Briefcase, 
+  CheckCircle2, 
+  Clock, 
+  FileText, 
+  TrendingUp 
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import ModalNewProject from "@/app/projects/ModalNewProject"
+import ProjectListModal from "@/app/projects/ProjectListModal";
 
 const taskColumns: GridColDef[] = [
   { field: "title", headerName: "Title", width: 200 },
@@ -36,6 +47,10 @@ const taskColumns: GridColDef[] = [
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 const HomePage = () => {
+  const router = useRouter();
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [isProjectListModalOpen, setIsProjectListModalOpen] = useState(false);
+
   const {
     data: tasks,
     isLoading: tasksLoading,
@@ -91,12 +106,96 @@ const HomePage = () => {
         text: "#000000",
       };
 
+  const handleCreateProject = () => {
+    setIsNewProjectModalOpen(true);
+  };
+
+  const handleViewTasks = () => {
+    router.push('/projects');
+  };
+
+  const handleTeamPerformance = () => {
+    router.push('/teams');
+  };
+
+  const handleCompletedProjects = () => {
+    router.push('/projects?status=completed');
+  };
+
+  const handleViewProjectList = () => {
+    setIsProjectListModalOpen(true);
+  };
+
+  const quickActionCards = [
+    {
+      title: "Create Project",
+      icon: Briefcase,
+      onClick: handleCreateProject,
+      description: "Start a new project and organize your team's work",
+    },
+    {
+      title: "View Tasks",
+      icon: FileText,
+      onClick: handleViewTasks,
+      description: "Track and manage your ongoing tasks",
+    },
+    {
+      title: "Team Performance",
+      icon: TrendingUp,
+      onClick: handleTeamPerformance,
+      description: "Analyze team productivity and progress",
+    },
+    {
+      title: "Completed Projects",
+      icon: CheckCircle2,
+      onClick: handleCompletedProjects,
+      description: "Review and celebrate completed projects",
+    },
+    {
+      title: "Project List",
+      icon: Briefcase,
+      onClick: handleViewProjectList,
+      description: "View all projects",
+    },
+  ];
+
   return (
-    <div className="container h-full w-[100%] bg-gray-100 bg-transparent p-8">
+    <div className="container h-full w-[100%] bg-transparent p-8">
       <Header name="Project Management Dashboard" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-lg bg-white p-4 shadow dark:bg-dark-secondary">
-          <h3 className="mb-4 text-lg font-semibold dark:text-white">
+      
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+        {quickActionCards.map((card, index) => (
+          <div 
+            key={index} 
+            onClick={card.onClick}
+            className={cn(
+              "group cursor-pointer flex items-center space-x-4 rounded-lg p-4 shadow-md transition-all duration-300",
+              "bg-white hover:bg-blue-50 dark:bg-dark-secondary dark:hover:bg-blue-900/20",
+              "transform hover:-translate-y-1 hover:scale-105"
+            )}
+          >
+            <card.icon 
+              className={cn(
+                "h-10 w-10 text-blue-500 group-hover:text-blue-600",
+                "dark:text-blue-300 dark:group-hover:text-blue-200"
+              )} 
+            />
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 dark:text-white">
+                {card.title}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {card.description}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="rounded-lg bg-white p-6 shadow dark:bg-dark-secondary">
+          <h3 className="mb-4 text-lg font-semibold dark:text-white flex items-center">
+            <Clock className="mr-2 h-5 w-5 text-blue-500 dark:text-blue-300" />
             Task Priority Distribution
           </h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -118,8 +217,10 @@ const HomePage = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="rounded-lg bg-white p-4 shadow dark:bg-dark-secondary">
-          <h3 className="mb-4 text-lg font-semibold dark:text-white">
+        
+        <div className="rounded-lg bg-white p-6 shadow dark:bg-dark-secondary">
+          <h3 className="mb-4 text-lg font-semibold dark:text-white flex items-center">
+            <Briefcase className="mr-2 h-5 w-5 text-green-500 dark:text-green-300" />
             Project Status
           </h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -137,8 +238,10 @@ const HomePage = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="rounded-lg bg-white p-4 shadow dark:bg-dark-secondary md:col-span-2">
-          <h3 className="mb-4 text-lg font-semibold dark:text-white">
+        
+        <div className="rounded-lg bg-white p-6 shadow dark:bg-dark-secondary md:col-span-2">
+          <h3 className="mb-4 text-lg font-semibold dark:text-white flex items-center">
+            <FileText className="mr-2 h-5 w-5 text-purple-500 dark:text-purple-300" />
             Your Tasks
           </h3>
           <div style={{ height: 400, width: "100%" }}>
@@ -155,7 +258,17 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-    </div>
+
+      <ModalNewProject 
+        isOpen={isNewProjectModalOpen} 
+        onClose={() => setIsNewProjectModalOpen(false)} 
+      /> 
+      <ProjectListModal 
+        isOpen={isProjectListModalOpen} 
+        onClose={() => setIsProjectListModalOpen(false)} 
+        projects={projects || []}
+      />
+    </div> 
   );
 };
 

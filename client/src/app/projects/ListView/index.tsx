@@ -1,7 +1,7 @@
-import Header from "@/components/Header";
-import TaskCard from "@/components/TaskCard";
-import TaskView from "@/components/TaskView";
-import { Task, useGetTasksQuery } from "@/state/api";
+import Header from "@/components/layout/Header";
+import TaskCard from "@/components/ui/TaskCard";
+import TaskView from "@/components/ui/TaskView";
+import { Task, useGetTasksQuery } from "@/lib/api/api";
 import React from "react";
 
 type Props = {
@@ -36,3 +36,6 @@ const ListView = ({ id, setIsModalNewTaskOpen }: Props) => {
 };
 
 export default ListView;
+
+
+

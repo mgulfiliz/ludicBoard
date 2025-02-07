@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
-import { Comment, Task as TaskType, User } from "@/state/api";
-import AddCommentForm from "./AddCommentForm";
+import { toast } from "react-toastify";
+import { Comment, Task as TaskType, User } from "@/types";
+import AddCommentForm from "@/components/tasks/forms/AddCommentForm";
 import { Trash2, Edit2, UserIcon } from "lucide-react";
-import { useDeleteCommentMutation, useEditCommentMutation, useGetUsersQuery } from "@/state/api";
-import ConfirmationModal from "@/components/ConfirmationModal";
+import { useDeleteCommentMutation, useEditCommentMutation, useGetUsersQuery } from "@/lib/api/api";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 type TaskCommentsProps = {
   taskId: number;
@@ -62,9 +63,24 @@ export default function TaskComments({
 
     try {
       await deleteComment({ commentId: commentToDelete }).unwrap();
+      toast.success("Comment deleted successfully", {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } catch (error) {
       console.error('Failed to delete comment', error);
-      alert('Unable to delete comment. Please try again.');
+      toast.error("Unable to delete comment. Please try again.", {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setCommentToDelete(null);
     }
@@ -72,7 +88,14 @@ export default function TaskComments({
 
   const handleEditComment = async (commentId: number) => {
     if (!editedCommentText.trim()) {
-      alert('Comment cannot be empty');
+      toast.error("Comment cannot be empty", {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
       return;
     }
 
@@ -80,9 +103,24 @@ export default function TaskComments({
       await editComment({ commentId, text: editedCommentText }).unwrap();
       setEditingCommentId(null);
       setEditedCommentText('');
+      toast.success("Comment updated successfully", {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } catch (error) {
       console.error('Failed to edit comment', error);
-      alert('Unable to edit comment. Please try again.');
+      toast.error("Unable to edit comment. Please try again.", {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
 

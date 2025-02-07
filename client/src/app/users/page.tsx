@@ -1,8 +1,8 @@
 "use client";
-import { useGetUsersQuery } from "@/state/api";
+import { useGetUsersQuery } from "@/lib/api/api";
 import React from "react";
 import { useAppSelector } from "../redux";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import {
   DataGrid,
   GridColDef,
@@ -71,3 +71,4 @@ const Users = () => {
 };
 
 export default Users;
+

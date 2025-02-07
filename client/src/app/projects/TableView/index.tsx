@@ -1,7 +1,7 @@
 import { useAppSelector } from "@/app/redux";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import { dataGridClassNames, dataGridSxStyles } from "@/lib/utils";
-import { useGetTasksQuery } from "@/state/api";
+import { useGetTasksQuery } from "@/lib/api/api";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import React from "react";
 
@@ -103,3 +103,4 @@ const TableView = ({ id, setIsModalNewTaskOpen }: Props) => {
 };
 
 export default TableView;
+

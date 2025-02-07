@@ -1,40 +1,69 @@
-import FormModal from "@/components/FormModal";
-import { useCreateProjectMutation } from "@/state/api";
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { formatISO } from "date-fns";
+import { useCreateProjectMutation } from "@/lib/api/api";
+import FormModal from "@/components/ui/FormModal";
+import { toast } from 'react-toastify';
 
-type Props = {
-  isOpen: boolean;
-  onClose: () => void;
+type ModalNewProjectProps = { 
+  isOpen: boolean; 
+  onClose: () => void; 
 };
 
-const ModalNewProject = ({ isOpen, onClose }: Props) => {
+const ModalNewProject: React.FC<ModalNewProjectProps> = ({ 
+  isOpen, 
+  onClose 
+}) => {
   const [createProject, { isLoading }] = useCreateProjectMutation();
-  const [projectName, setProjectName] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [formState, setFormState] = useState({
+    name: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+  });
 
-  const isFormValid = () => {
-    return projectName && description && startDate && endDate;
-  };
+  const resetForm = useCallback(() => {
+    setFormState({
+      name: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+    });
+  }, []);
+
+  const isFormValid = useMemo(() => 
+    formState.name.trim().length >= 3, 
+    [formState.name]
+  );
 
   const handleSubmit = async () => {
-    if (!isFormValid()) return;
+    if (!isFormValid) return;
 
-    const formattedStartDate = formatISO(new Date(startDate), {
-      representation: "complete",
-    });
-    const formattedEndDate = formatISO(new Date(endDate), {
-      representation: "complete",
-    });
+    try {
+      await createProject({
+        name: formState.name.trim(),
+        description: formState.description.trim() || undefined,
+        startDate: formState.startDate 
+          ? formatISO(new Date(formState.startDate)) 
+          : undefined,
+        endDate: formState.endDate 
+          ? formatISO(new Date(formState.endDate)) 
+          : undefined,
+      }).unwrap();
 
-    await createProject({
-      name: projectName,
-      description,
-      startDate: formattedStartDate,
-      endDate: formattedEndDate,
-    });
+      resetForm();
+      onClose();
+      
+      toast.success('Project created successfully', {
+        position: 'bottom-right',
+        autoClose: 3000,
+      });
+    } catch (error) {
+      console.error('Failed to create project', error);
+      toast.error('Failed to create project', {
+        position: 'bottom-right',
+        autoClose: 3000,
+      });
+    }
   };
 
   const inputStyles = "w-full rounded border border-gray-300 p-2 shadow-sm dark:border-dark-tertiary dark:bg-dark-tertiary dark:text-white";
@@ -42,30 +71,45 @@ const ModalNewProject = ({ isOpen, onClose }: Props) => {
   return (
     <FormModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
       title="Create New Project"
       onSubmit={handleSubmit}
       isLoading={isLoading}
+      submitDisabled={!isFormValid || isLoading}
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-white">Project Name</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Project Name *</label>
           <input
             type="text"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            className={inputStyles}
+            value={formState.name}
+            onChange={(e) => setFormState(prev => ({ ...prev, name: e.target.value }))}
+            className={`
+              ${inputStyles} 
+              ${formState.name.trim().length > 0 && formState.name.trim().length < 3 
+                ? 'border-red-500 focus:ring-red-500' 
+                : ''
+              }
+            `}
             required
+            minLength={3}
           />
+          {formState.name.trim().length > 0 && formState.name.trim().length < 3 && (
+            <p className="text-xs text-red-500 mt-1">
+              Project name must be at least 3 characters long
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-white">Description</label>
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={formState.description}
+            onChange={(e) => setFormState(prev => ({ ...prev, description: e.target.value }))}
             className={inputStyles}
             rows={3}
-            required
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -73,20 +117,18 @@ const ModalNewProject = ({ isOpen, onClose }: Props) => {
             <label className="block text-sm font-medium text-gray-700 dark:text-white">Start Date</label>
             <input
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={formState.startDate}
+              onChange={(e) => setFormState(prev => ({ ...prev, startDate: e.target.value }))}
               className={inputStyles}
-              required
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-white">End Date</label>
             <input
               type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              value={formState.endDate}
+              onChange={(e) => setFormState(prev => ({ ...prev, endDate: e.target.value }))}
               className={inputStyles}
-              required
             />
           </div>
         </div>

@@ -1,11 +1,11 @@
-import { useUpdateTaskStatusMutation, useDeleteTaskMutation } from "@/state/api";
+import { useUpdateTaskStatusMutation, useDeleteTaskMutation } from "@/lib/api/api";
 import React, { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Task } from "@/types";
 import TaskColumn from "./TaskColumn";
-import EditTaskModal from "./EditTaskModal";
-import TaskView from "@/components/TaskView";
+import EditTaskModal from "@/components/tasks/modals/EditTaskModal";
+import TaskView from "@/components/ui/TaskView";
 
 const taskStatus = ["To Do", "Work In Progress", "Under Review", "Completed"];
 
@@ -30,9 +30,7 @@ const BoardView = ({ id, setIsModalNewTaskOpen }: BoardProps) => {
   };
 
   const handleDeleteTask = (taskId: number) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
-      deleteTask({ taskId });
-    }
+    deleteTask({ taskId });
   };
 
   const renderTasks = (tasks: Task[]) => (

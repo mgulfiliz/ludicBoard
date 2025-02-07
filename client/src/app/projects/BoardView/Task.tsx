@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useDrag } from "react-dnd";
-import { Task as TaskType } from "@/state/api";
+import { Task as TaskType } from "@/types";
 import { MessageSquareMore, UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
-import TaskActions from "./TaskActions";
+import TaskActions from "@/components/tasks/actions/TaskActions";
 import TaskComments from "./TaskComments";
 
 type TaskProps = {
