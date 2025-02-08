@@ -8,16 +8,28 @@ const prisma = new PrismaClient();
 async function deleteAllData() {
   console.log("Starting data deletion...");
   try {
-    // Delete in reverse order of dependencies to avoid foreign key constraints
+    // Delete in strict reverse order of dependencies to avoid foreign key constraints
+    await prisma.comment.deleteMany({});
+    console.log("Deleted all comments");
+
+    await prisma.attachment.deleteMany({});
+    console.log("Deleted all attachments");
+
+    await prisma.taskAssignment.deleteMany({});
+    console.log("Deleted all task assignments");
+
+    await prisma.task.deleteMany({});
+    console.log("Deleted all tasks");
+
     await prisma.projectTeam.deleteMany({});
     console.log("Deleted all project teams");
-    
+
     await prisma.project.deleteMany({});
     console.log("Deleted all projects");
-    
+
     await prisma.team.deleteMany({});
     console.log("Deleted all teams");
-    
+
     await prisma.user.deleteMany({});
     console.log("Deleted all users");
   } catch (error) {
@@ -83,7 +95,7 @@ async function seedTeams(users: any[]) {
   return createdTeams;
 }
 
-async function seedProjects(teams: any[]) {
+async function seedProjects(teams: any[], users: any[]) {
   console.log("Starting project seeding...");
   const projectsPath = path.join(__dirname, "seedData", "project.json");
   const projects = JSON.parse(fs.readFileSync(projectsPath, "utf-8"));
@@ -141,6 +153,68 @@ async function seedProjectTeams(projects: any[], teams: any[]) {
   return createdProjectTeams;
 }
 
+async function seedTasks(projects: any[], users: any[]) {
+  console.log("Starting task seeding...");
+  const tasksPath = path.join(__dirname, "seedData", "task.json");
+  const tasks = JSON.parse(fs.readFileSync(tasksPath, "utf-8"));
+
+  const createdTasks = [];
+  for (const taskData of tasks) {
+    try {
+      console.log(`Seeding task: ${taskData.title}`);
+      const task = await prisma.task.create({
+        data: {
+          title: taskData.title,
+          description: taskData.description,
+          status: taskData.status,
+          priority: taskData.priority,
+          tags: taskData.tags,
+          startDate: new Date(taskData.startDate),
+          dueDate: new Date(taskData.dueDate),
+          points: taskData.points || null,
+          projectId: projects.find(p => p.id === taskData.projectId)?.id || projects[0].id,
+          authorUserId: users.find(u => u.userId === taskData.authorUserId)?.userId || users[0].userId,
+          assignedUserId: users.find(u => u.userId === taskData.assignedUserId)?.userId || null
+        }
+      });
+      createdTasks.push(task);
+      console.log(`Successfully seeded task: ${task.title}`);
+    } catch (error) {
+      console.error(`Error seeding task ${taskData.title}:`, error);
+    }
+  }
+
+  console.log(`Total tasks seeded: ${createdTasks.length}`);
+  return createdTasks;
+}
+
+async function seedComments(tasks: any[], users: any[]) {
+  console.log("Starting comment seeding...");
+  const commentsPath = path.join(__dirname, "seedData", "comment.json");
+  const comments = JSON.parse(fs.readFileSync(commentsPath, "utf-8"));
+
+  const createdComments = [];
+  for (const commentData of comments) {
+    try {
+      console.log(`Seeding comment for task: ${commentData.taskId}`);
+      const comment = await prisma.comment.create({
+        data: {
+          text: commentData.text,
+          taskId: tasks.find(t => t.id === commentData.taskId)?.id || tasks[0].id,
+          userId: users.find(u => u.userId === commentData.userId)?.userId || users[0].userId
+        }
+      });
+      createdComments.push(comment);
+      console.log(`Successfully seeded comment`);
+    } catch (error) {
+      console.error(`Error seeding comment:`, error);
+    }
+  }
+
+  console.log(`Total comments seeded: ${createdComments.length}`);
+  return createdComments;
+}
+
 async function main() {
   console.log("Starting seeding process...");
 
@@ -151,8 +225,10 @@ async function main() {
     // Seed data with relationships
     const users = await seedUsers();
     const teams = await seedTeams(users);
-    const projects = await seedProjects(teams);
+    const projects = await seedProjects(teams, users);
     await seedProjectTeams(projects, teams);
+    const tasks = await seedTasks(projects, users);
+    await seedComments(tasks, users);
 
     console.log("Seeding completed successfully!");
   } catch (error) {
