@@ -451,26 +451,30 @@ export const api = createApi({
     search: build.query<SearchResults, string>({
       query: (query) => `search?query=${query}`,
     }),
-    createComment: build.mutation<Comment, { taskId: number; text: string; userId: number }>({
+    createComment: build.mutation<Comment, { taskId: number; text: string; userId?: number }>({
       query: ({ taskId, text, userId }) => ({
         url: `tasks/${taskId}/comments`,
         method: 'POST',
-        body: { text, userId },
+        body: { text, ...(userId ? { userId } : {}) },
       }),
       invalidatesTags: (result, error, { taskId }) => [
         { type: CACHE_TAGS.Tasks, id: taskId },
         CACHE_TAGS.Comments,
       ],
-      transformResponse: (response: Comment) => ({
-        ...response,
-        user: response.user || { 
-          userId: response.userId, 
-          username: `User ${response.userId}`,
-          email: '',
-          profilePictureUrl: undefined 
-        },
-        createdAt: response.createdAt || new Date().toISOString(),
-      }),
+      async onQueryStarted({ taskId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data: newComment } = await queryFulfilled;
+          dispatch(
+            api.util.updateQueryData('getTasks', { projectId: undefined }, draft => {
+              const task = draft.find(t => t.id === taskId);
+              if (task) {
+                if (!task.comments) task.comments = [];
+                task.comments.unshift(newComment);
+              }
+            })
+          );
+        } catch {}
+      }
     }),
     editComment: build.mutation<Comment, { commentId: number; text: string }>({
       query: ({ commentId, text }) => ({

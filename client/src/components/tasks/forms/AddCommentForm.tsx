@@ -1,8 +1,8 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { useCreateCommentMutation } from '@/lib/api/api';
 import { Send } from 'lucide-react';
-import AssignedUserSelect from '@/components/common/AssignedUserSelect';
 import { toast } from 'react-toastify';
+import { useGetCurrentUserQuery } from '@/lib/api/api';
 
 type AddCommentFormProps = {
   taskId: number;
@@ -14,37 +14,29 @@ const AddCommentForm: React.FC<AddCommentFormProps> = ({
   onCommentAdded 
 }) => {
   const [text, setText] = useState('');
-  const [userId, setUserId] = useState('');
   const [createComment, { isLoading }] = useCreateCommentMutation();
+  const { data: currentUser } = useGetCurrentUserQuery();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [showAuthorError, setShowAuthorError] = useState(false);
 
   const resetForm = useCallback(() => {
     setText('');
-    setUserId('');
-    setShowAuthorError(false);
   }, []);
 
   const isFormValid = useMemo(() => 
-    text.trim().length > 0 && userId.trim().length > 0, 
-    [text, userId]
+    text.trim().length > 0 && currentUser?.userId, 
+    [text, currentUser]
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!text.trim()) return;
-
-    if (!userId.trim()) {
-      setShowAuthorError(true);
-      return;
-    }
+    if (!text.trim() || !currentUser?.userId) return;
 
     try {
       await createComment({ 
         taskId, 
         text: text.trim(), 
-        userId: Number(userId)
+        userId: currentUser.userId
       }).unwrap();
 
       resetForm();
@@ -66,21 +58,6 @@ const AddCommentForm: React.FC<AddCommentFormProps> = ({
 
   return (
     <div className="mt-4 space-y-2">
-      <AssignedUserSelect 
-        assignedUserId={userId}
-        setAssignedUserId={(value) => {
-          setUserId(value);
-          setShowAuthorError(false);
-        }}
-        label="Comment As"
-        required={showAuthorError}
-      />
-      {showAuthorError && (
-        <p className="text-xs text-red-500 -mt-1 mb-2">
-          Please select an author
-        </p>
-      )}
-
       <form 
         onSubmit={handleSubmit} 
         className="relative group"
@@ -95,12 +72,12 @@ const AddCommentForm: React.FC<AddCommentFormProps> = ({
             className="flex-1 px-4 py-3 bg-transparent outline-none w-full text-sm 
               placeholder-gray-500 dark:placeholder-neutral-500 
               text-gray-800 dark:text-white"
-            disabled={isLoading}
+            disabled={isLoading || !currentUser}
             required
           />
           <button 
             type="submit" 
-            disabled={!text.trim() || isLoading || (showAuthorError && !userId.trim())}
+            disabled={!text.trim() || isLoading || !currentUser}
             className="
               mr-2 p-2 rounded-full 
               transition-all duration-300
@@ -116,7 +93,7 @@ const AddCommentForm: React.FC<AddCommentFormProps> = ({
               size={20} 
               className={`
                 transition-transform duration-300
-                ${text.trim() && userId ? 'rotate-0 opacity-100' : 'rotate-45 opacity-50'}
+                ${text.trim() && currentUser ? 'rotate-0 opacity-100' : 'rotate-45 opacity-50'}
               `} 
             />
           </button>
