@@ -37,6 +37,11 @@ export interface RegisterRequest {
   password: string;
 }
 
+export interface UpdateProfileRequest {
+  username?: string;
+  email?: string;
+}
+
 export interface AuthResponse {
   userId: number;
   username: string;
@@ -52,6 +57,11 @@ export interface ErrorResponse {
     field?: string;
     message: string;
   }>;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 const prepareAuthHeaders = (headers: Headers) => {
@@ -202,6 +212,55 @@ export const api = createApi({
         }
       },
       invalidatesTags: [CACHE_TAGS.Auth]
+    }),
+
+    updateProfile: build.mutation<AuthResponse, UpdateProfileRequest>({
+      query: (body) => ({
+        url: '/auth/update-profile',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [CACHE_TAGS.Users, CACHE_TAGS.Auth],
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          // Update the credentials with the new user data
+          dispatch(
+            setCredentials({
+              user: {
+                userId: data.userId,
+                username: data.username,
+                email: data.email
+              },
+              token: data.token
+            })
+          );
+        } catch (error) {
+          console.error('Profile update failed', error);
+        }
+      },
+    }),
+
+    changePassword: build.mutation<{ message: string; token: string; user: User }, ChangePasswordRequest>({
+      query: (body) => ({
+        url: '/auth/change-password',
+        method: 'PATCH',
+        body,
+      }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          // Update the token and user in the store
+          dispatch(
+            setCredentials({
+              token: data.token,
+              user: data.user
+            })
+          );
+        } catch (error) {
+          console.error('Password change failed', error);
+        }
+      },
     }),
 
     getProjects: build.query<Project[], void>({
@@ -457,6 +516,8 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useLogoutMutation,
+  useUpdateProfileMutation,
+  useChangePasswordMutation,
   useGetCurrentUserQuery,
   useGetProjectsQuery,
   useGetProjectQuery,

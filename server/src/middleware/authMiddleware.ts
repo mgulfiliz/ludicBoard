@@ -1,16 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient, Prisma, User } from '@prisma/client';
-
-// Extend Express Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
-  }
-}
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -19,6 +10,21 @@ function generateToken(userId: number) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'defaultSecret', {
     expiresIn: '30d'
   });
+}
+
+// Extend Express Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: number;
+        username: string;
+        email: string;
+        name?: string | null;
+        profilePictureUrl?: string | null;
+      };
+    }
+  }
 }
 
 // Middleware to protect routes
@@ -47,6 +53,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
           userId: true,
           username: true,
           email: true,
+          name: true,
           profilePictureUrl: true
         }
       });
@@ -76,10 +83,12 @@ export const registerUser = async (req: Request, res: Response) => {
 
   try {
     // Check if user already exists
-    const userExists = await prisma.user.findUnique({
+    const userExists = await prisma.user.findFirst({
       where: { 
-        email: email,
-        // OR username: username 
+        OR: [
+          { email: email },
+          { username: username }
+        ]
       }
     });
 
@@ -113,7 +122,7 @@ export const registerUser = async (req: Request, res: Response) => {
       token
     });
   } catch (error) {
-    // Minimal error logging
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error during registration' });
   }
 };
@@ -149,7 +158,7 @@ export const loginUser = async (req: Request, res: Response) => {
       token
     });
   } catch (error) {
-    // Minimal error logging
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };
@@ -164,7 +173,127 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 
     res.json(req.user);
   } catch (error) {
-    // Minimal error logging
+    console.error('Get current user error:', error);
     res.status(500).json({ message: 'Server error retrieving user' });
+  }
+};
+
+// Update Profile
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    // Ensure user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    const { username, email } = req.body;
+    const userId = req.user.userId;
+
+    // Validate input
+    if (!username && !email) {
+      return res.status(400).json({ message: 'No update data provided' });
+    }
+
+    // Check if username is already taken (if provided)
+    if (username) {
+      const existingUser = await prisma.user.findUnique({
+        where: { username }
+      });
+
+      if (existingUser && existingUser.userId !== userId) {
+        return res.status(400).json({ message: 'Username already taken' });
+      }
+    }
+
+    // Update user profile
+    const updatedUser = await prisma.user.update({
+      where: { userId },
+      data: {
+        ...(username && { username }),
+        // Uncomment and modify email update logic as needed
+        // ...(email && { email })
+      },
+      select: {
+        userId: true,
+        username: true,
+        email: true
+      }
+    });
+
+    // Generate new token
+    const token = generateToken(userId);
+
+    res.json({
+      ...updatedUser,
+      token
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Server error updating profile' });
+  }
+};
+
+// Change Password
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    // Ensure user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.userId;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current and new passwords are required' });
+    }
+
+    // Find user in database to verify current password
+    const user = await prisma.user.findUnique({
+      where: { userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Validate new password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters long' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password in database
+    const updatedUser = await prisma.user.update({
+      where: { userId },
+      data: { password: hashedNewPassword },
+      select: {
+        userId: true,
+        username: true,
+        email: true
+      }
+    });
+
+    // Generate new token
+    const token = generateToken(userId);
+
+    res.json({ 
+      message: 'Password changed successfully',
+      token,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ message: 'Server error changing password' });
   }
 };

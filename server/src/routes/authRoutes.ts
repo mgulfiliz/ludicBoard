@@ -3,7 +3,9 @@ import {
   registerUser, 
   loginUser, 
   protect,
-  getCurrentUser 
+  getCurrentUser,
+  updateProfile,
+  changePassword
 } from '../middleware/authMiddleware';
 
 const router = express.Router();
@@ -29,5 +31,11 @@ router.get('/logout', (req, res) => {
 
 // Get current user (protected route)
 router.get('/me', protect, getCurrentUser);
+
+// Update profile route (protected)
+router.patch('/update-profile', protect, updateProfile);
+
+// Change password route (protected)
+router.patch('/change-password', protect, changePassword);
 
 export default router;
