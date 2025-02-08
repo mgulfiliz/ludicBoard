@@ -30,7 +30,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useDeleteProjectMutation } from "@/lib/api/api";
 import CustomMenu from "@/components/common/CustomMenu";
@@ -38,12 +38,23 @@ import CustomMenu from "@/components/common/CustomMenu";
 const Sidebar = () => {
   const [showProjects, setShowProjects] = useState(true);
   const [showPriority, setShowPriority] = useState(true);
- 
+  const [isMobile, setIsMobile] = useState(false);
+
   const { data: projects } = useGetProjectsQuery();
   const dispatch = useAppDispatch();
   const router = useRouter();
   const [deleteProject] = useDeleteProjectMutation();
   const isSidebarCollapsed = useAppSelector((state) => state.global.isSidebarCollapsed);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const toggleSidebar = () => {
     dispatch(setIsSidebarCollapsed(!isSidebarCollapsed));
@@ -51,7 +62,12 @@ const Sidebar = () => {
 
   const sidebarClassNames = `fixed top-0 left-0 flex flex-col h-full justify-between shadow-xl
     transition-all duration-300 z-40 dark:bg-neutral-900 bg-neutral-100 border-r border-gray-200 dark:border-neutral-700
-    ${isSidebarCollapsed ? "w-16" : "w-64"} ${isSidebarCollapsed ? "overflow-hidden" : "overflow-y-auto"}`;
+    ${isMobile ? 
+      (isSidebarCollapsed ? "w-0 -translate-x-full" : "w-64 translate-x-0") : 
+      (isSidebarCollapsed ? "w-16" : "w-64")
+    } 
+    ${isSidebarCollapsed ? "overflow-hidden" : "overflow-y-auto"}
+    ${isMobile ? "fixed top-0 left-0 h-full" : ""}`;
 
   const linkClassName = (collapsed: boolean) => `
     flex items-center p-3 hover:bg-gray-200 dark:hover:bg-neutral-700 
@@ -108,6 +124,13 @@ const Sidebar = () => {
 
   return (
     <div className={sidebarClassNames}>
+      {isMobile && !isSidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30" 
+          onClick={toggleSidebar}
+          aria-label="Close Sidebar"
+        />
+      )}
       <div className="flex h-full w-full flex-col justify-start">
         {/* TOP LOGO/TOGGLE */}
         <div className="flex items-center justify-center min-h-[56px] border-b border-gray-200 dark:border-neutral-800">
