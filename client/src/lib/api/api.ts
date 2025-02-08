@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { 
   Project, 
   Priority, 
@@ -10,6 +11,7 @@ import {
   SearchResults, 
   Team 
 } from "@/types";
+import { setCredentials, clearCredentials } from '../features/authSlice';
 
 export { Priority, Status };
 export type { Task, User, Project, Comment, Attachment, SearchResults, Team };
@@ -20,10 +22,40 @@ export const CACHE_TAGS = {
   Users: 'Users',
   Teams: 'Teams',
   Comments: 'Comments',
+  Auth: 'Auth'
 } as const;
 
+// Authentication Types
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  userId: number;
+  username: string;
+  email: string;
+  token: string;
+}
+
+// Error Response Type
+export interface ErrorResponse {
+  status: 'fail' | 'error';
+  message: string;
+  errors?: Array<{
+    field?: string;
+    message: string;
+  }>;
+}
+
 const prepareAuthHeaders = (headers: Headers) => {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('token');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -37,22 +69,141 @@ const transformUserData = (user?: Partial<User>) => user || {
   profilePictureUrl: undefined 
 };
 
-const transformCommentData = (comment: Comment) => ({
-  ...comment,
-  user: transformUserData(comment.user),
-  createdAt: comment.createdAt || new Date().toISOString(),
-  updatedAt: comment.updatedAt || comment.createdAt || new Date().toISOString()
-});
+// Helper function to extract error message
+const extractErrorMessage = (error: FetchBaseQueryError): string => {
+  if (error.data && typeof error.data === 'object' && 'message' in error.data) {
+    return (error.data as ErrorResponse).message;
+  }
+  return 'An unexpected error occurred';
+};
 
 export const api = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     prepareHeaders: prepareAuthHeaders,
   }),
-  reducerPath: "api",
   tagTypes: Object.values(CACHE_TAGS),
-  keepUnusedDataFor: 300,
   endpoints: (build) => ({
+    // Authentication Endpoints
+    login: build.mutation<AuthResponse, LoginRequest>({
+      query: (credentials) => ({
+        url: '/auth/login',
+        method: 'POST',
+        body: credentials
+      }),
+      transformErrorResponse: (error: FetchBaseQueryError) => {
+        const errorMessage = extractErrorMessage(error);
+        return {
+          status: error.status,
+          error: errorMessage,
+        };
+      },
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setCredentials({ 
+            user: {
+              userId: data.userId,
+              username: data.username,
+              email: data.email,
+              profilePictureUrl: undefined
+            }, 
+            token: data.token 
+          }));
+        } catch {
+          dispatch(clearCredentials());
+        }
+      },
+      invalidatesTags: [CACHE_TAGS.Auth]
+    }),
+
+    logout: build.mutation<void, void>({
+      query: () => ({
+        url: '/auth/logout',
+        method: 'GET'
+      }),
+      transformErrorResponse: (error: FetchBaseQueryError) => {
+        const errorMessage = extractErrorMessage(error);
+        return {
+          status: error.status,
+          error: errorMessage,
+        };
+      },
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(clearCredentials());
+        } catch {
+          dispatch(clearCredentials());
+        }
+      },
+      invalidatesTags: [CACHE_TAGS.Auth]
+    }),
+
+    getCurrentUser: build.query<User | null, void>({
+      query: () => '/auth/me',
+      providesTags: [CACHE_TAGS.Auth],
+      transformResponse: (response: User | null) => {
+        // If no token or unauthorized, return null
+        if (!localStorage.getItem('token')) {
+          return null;
+        }
+        return response;
+      },
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          if (data) {
+            dispatch(setCredentials({ 
+              user: data, 
+              token: localStorage.getItem('token')! 
+            }));
+          }
+        } catch {
+          dispatch(clearCredentials());
+        }
+      },
+      transformErrorResponse: (error: FetchBaseQueryError) => {
+        // Silently handle unauthorized errors
+        if (error.status === 401) {
+          localStorage.removeItem('token');
+        }
+        return null;
+      }
+    }),
+
+    register: build.mutation<AuthResponse, RegisterRequest>({
+      query: (userData) => ({
+        url: '/auth/register',
+        method: 'POST',
+        body: userData
+      }),
+      transformErrorResponse: (error: FetchBaseQueryError) => {
+        const errorMessage = extractErrorMessage(error);
+        return {
+          status: error.status,
+          error: errorMessage,
+        };
+      },
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setCredentials({ 
+            user: {
+              userId: data.userId,
+              username: data.username,
+              email: data.email,
+              profilePictureUrl: undefined
+            }, 
+            token: data.token 
+          }));
+        } catch {
+          dispatch(clearCredentials());
+        }
+      },
+      invalidatesTags: [CACHE_TAGS.Auth]
+    }),
+
     getProjects: build.query<Project[], void>({
       query: () => "projects",
       providesTags: (result) => 
@@ -301,7 +452,12 @@ export const api = createApi({
   }),
 });
 
+// Export hooks for authentication and existing endpoints
 export const {
+  useLoginMutation,
+  useRegisterMutation,
+  useLogoutMutation,
+  useGetCurrentUserQuery,
   useGetProjectsQuery,
   useGetProjectQuery,
   useCreateProjectMutation,

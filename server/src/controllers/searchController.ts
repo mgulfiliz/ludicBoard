@@ -81,9 +81,14 @@ export const search = async (req: Request, res: Response, next: NextFunction): P
       calculateRelevanceScore(b, queryString) - calculateRelevanceScore(a, queryString)
     );
 
-    const sortedUsers = users.sort((a, b) => 
-      calculateRelevanceScore(b, queryString) - calculateRelevanceScore(a, queryString)
-    );
+    const sortedUsers = users
+      .map(user => ({
+        ...user,
+        name: user.name || undefined
+      }))
+      .sort((a, b) => 
+        calculateRelevanceScore(b, queryString) - calculateRelevanceScore(a, queryString)
+      );
 
     res.json({ 
       tasks: sortedTasks, 

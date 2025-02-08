@@ -67,7 +67,9 @@ const Sidebar = () => {
       (isSidebarCollapsed ? "w-16" : "w-64")
     } 
     ${isSidebarCollapsed ? "overflow-hidden" : "overflow-y-auto"}
-    ${isMobile ? "fixed top-0 left-0 h-full" : ""}`;
+    ${isMobile ? "fixed top-0 left-0 h-full" : ""}
+    ${isSidebarCollapsed ? "" : "w-64"}
+  `;
 
   const linkClassName = (collapsed: boolean) => `
     flex items-center p-3 hover:bg-gray-200 dark:hover:bg-neutral-700 

@@ -1,81 +1,137 @@
-import React, { useState, useEffect } from "react";
-import { Menu, Moon, Settings, Sun, Bell } from "lucide-react";
-import Link from "next/link";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Moon, Settings, Sun, Bell, LogIn, UserPlus } from "lucide-react";
+import { Button } from '@mui/material';
 import { useAppDispatch, useAppSelector } from "@/app/redux";
-import { setIsDarkMode, setIsSidebarCollapsed } from "@/lib/api";
+import { setIsDarkMode } from "@/lib/api";
 import { SearchBar } from "./SearchBar";
+import { useLogoutMutation } from '@/lib/api/api';
+import { clearCredentials } from '@/lib/features/authSlice';
+import LoginModal from '@/components/auth/LoginModal';
+import RegisterModal from '@/components/auth/RegisterModal';
+import { toast } from 'react-toastify';
 
 const Navbar = () => {
   const dispatch = useAppDispatch();
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   const isDarkMode = useAppSelector((state) => state.global.isDarkMode);
-  const isSidebarCollapsed = useAppSelector((state) => state.global.isSidebarCollapsed);
+  const { user } = useAppSelector((state) => state.auth);
+  const [logout] = useLogoutMutation();
 
-  useEffect(() => {
+  const toggleDarkMode = () => {
+    dispatch(setIsDarkMode(!isDarkMode));
+  };
+
+  React.useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const toggleSidebar = () => {
-    dispatch(setIsSidebarCollapsed(!isSidebarCollapsed));
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+      dispatch(clearCredentials());
+      toast.info('Logged out successfully');
+    } catch (error) {
+      toast.error('Logout failed');
+      console.error('Logout error:', error);
+    }
   };
 
   const iconClassName = "h-5 w-5 text-gray-600 dark:text-gray-300";
   const buttonClassName = "p-2 rounded hover:bg-gray-100 dark:hover:bg-neutral-800";
 
   return (
-    <div className={`fixed top-0 inset-x-0 h-[56px] border-b border-gray-200 dark:border-neutral-700 z-[10] 
-      bg-neutral-100 dark:bg-neutral-900 transition-all duration-300 ease-in-out
-      ${isSidebarCollapsed ? "left-16 md:left-16 sm:left-0" : "left-64 md:left-64 sm:left-0"}`}
-    >
-      <div className="container max-w-7xl h-full mx-auto flex items-center justify-between px-4">
-        {isMobile && (
-          <button 
-            onClick={toggleSidebar} 
-            className={`${buttonClassName} mr-2`}
-            aria-label="Toggle Sidebar"
-          >
-            <Menu className={iconClassName} />
-          </button>
-        )}
-        <SearchBar isDarkMode={isDarkMode} />
+    <>
+      <div className="sticky top-0 z-40 w-full backdrop-blur flex-none transition-colors duration-500 lg:z-50 border-b border-gray-200 dark:border-neutral-700 bg-white/95 supports-backdrop-blur:bg-white/60 dark:bg-transparent h-16">
+        <div className="max-w-8xl mx-auto">
+          <div className="py-2 lg:px-8 lg:border-0 mx-4 lg:mx-0">
+            <div className="relative flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {/* Search Bar */}
+                <SearchBar isDarkMode={isDarkMode} />
+              </div>
 
-        {/* Icons */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center space-x-2">
-          <button
-            onClick={() => dispatch(setIsDarkMode(!isDarkMode))}
-            className={buttonClassName}
-            aria-label="Toggle Dark Mode"
-          >
-            {isDarkMode ? (
-              <Sun className={iconClassName} />
-            ) : (
-              <Moon className={iconClassName} />
-            )}
-          </button>
-          <Link
-            href="/notifications"
-            className={`${buttonClassName} h-min w-min`}
-            aria-label="Notifications"
-          >
-            <Bell className={iconClassName} />
-          </Link>
-          <Link 
-            href="/settings" 
-            className={buttonClassName}
-            aria-label="Settings"
-          >
-            <Settings className={iconClassName} />
-          </Link>
+              <div className="flex items-center space-x-2">
+                {/* Dark Mode Toggle */}
+                <button 
+                  onClick={toggleDarkMode} 
+                  className={buttonClassName}
+                >
+                  {isDarkMode ? <Sun className={iconClassName} /> : <Moon className={iconClassName} />}
+                </button>
+
+                {/* Notifications */}
+                <Link 
+                  href="/notifications" 
+                  className={buttonClassName}
+                >
+                  <Bell className={iconClassName} />
+                </Link>
+
+                {/* Settings */}
+                <Link 
+                  href="/settings" 
+                  className={buttonClassName}
+                >
+                  <Settings className={iconClassName} />
+                </Link>
+
+                {user ? (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      Welcome, {user.username}
+                    </span>
+                    <Button 
+                      variant="contained" 
+                      color="error" 
+                      size="small" 
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<LogIn />} 
+                      onClick={() => setIsLoginModalOpen(true)}
+                    >
+                      Login
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      startIcon={<UserPlus />} 
+                      onClick={() => setIsRegisterModalOpen(true)}
+                    >
+                      Register
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Authentication Modals */}
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
+      <RegisterModal 
+        isOpen={isRegisterModalOpen} 
+        onClose={() => setIsRegisterModalOpen(false)} 
+      />
+    </>
   );
 };
 

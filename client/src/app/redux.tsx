@@ -8,6 +8,7 @@ import {
 } from "react-redux";
 import globalReducer from "@/lib/api";
 import { api } from "@/lib/api/api";
+import authReducer from "@/lib/features/authSlice";
 import { setupListeners } from "@reduxjs/toolkit/query";
 
 import {
@@ -46,12 +47,15 @@ const storage =
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["global"],
+  whitelist: ["global", "auth"], // Add auth to persistence
 };
+
 const rootReducer = combineReducers({
   global: globalReducer,
+  auth: authReducer, // Add auth reducer
   [api.reducerPath]: api.reducer,
 });
+
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 /* REDUX STORE */
