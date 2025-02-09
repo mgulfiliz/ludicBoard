@@ -5,7 +5,7 @@ import {
   Box,
 } from "@mui/material";
 import AssignedUserSelect from "@/components/common/AssignedUserSelect";
-import { Task, useUpdateTaskMutation } from "@/lib/api/api";
+import { Task, useUpdateTaskMutation, useGetCurrentUserQuery } from "@/lib/api/api";
 import { formatISO } from "date-fns";
 import { toast } from "react-toastify";
 
@@ -23,37 +23,29 @@ interface UpdateTaskPayload {
 }
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) => {
+  const { data: currentUser } = useGetCurrentUserQuery();
   const [formState, setFormState] = useState({
     title: "",
     description: "",
-    tags: [] as string[],
+    tags: "" as string,
     startDate: "",
     dueDate: "",
     assignedUserId: "",
-    authorUserId: "",
+    authorUserId: currentUser?.userId ? String(currentUser.userId) : '',
   });
 
   const [updateTask, { isLoading }] = useUpdateTaskMutation();
 
   useEffect(() => {
     if (task) {
-      // Handle tags as either array or string
-      const parseTags = (tags?: string | string[]) => {
-        if (!tags) return [];
-        
-        // If tags is already an array, trim and filter
-        if (Array.isArray(tags)) {
-          return tags.map(tag => tag.trim()).filter(tag => tag);
-        }
-        
-        // If tags is a string, split and process
-        return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-      };
+      const tagsString = Array.isArray(task.tags) 
+        ? task.tags.filter(tag => tag?.trim?.()).join(', ') 
+        : task.tags || '';
 
       setFormState({
         title: task.title,
         description: task.description ?? '',
-        tags: parseTags(task.tags),
+        tags: tagsString,
         startDate: task.startDate ? formatISO(new Date(task.startDate), { representation: "date" }) : '',
         dueDate: task.dueDate ? formatISO(new Date(task.dueDate), { representation: "date" }) : '',
         assignedUserId: String(task.assignedUserId ?? ''),
@@ -64,13 +56,21 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
 
   const isFormValid = () => {
     const titleValid = formState.title.trim().length > 0;
-    const authorValid = formState.authorUserId.trim().length > 0;
-    return titleValid && authorValid;
+    return titleValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Ensure current user is authenticated
+    if (!currentUser) {
+      toast.error("Authentication required", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+
     if (!isFormValid()) {
       toast.error("Please fill in all required fields", {
         position: "bottom-right",
@@ -92,16 +92,22 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
         throw new Error('No task selected');
       }
 
+      // Process tags from input string
+      const processTags = formState.tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag !== '');
+
       const updatePayload: UpdateTaskPayload = {
         taskId: task.id,
         task: {
           title: formState.title.trim(),
           description: formState.description.trim() || undefined,
-          tags: formState.tags.length > 0 ? formState.tags : undefined,
+          tags: processTags.length > 0 ? processTags : undefined,
           startDate: formattedStartDate,
           dueDate: formattedDueDate,
           assignedUserId: formState.assignedUserId ? parseInt(formState.assignedUserId, 10) : undefined,
-          authorUserId: formState.authorUserId ? parseInt(formState.authorUserId, 10) : undefined,
+          authorUserId: currentUser.userId, // Always use current user's ID
         }
       };
 
@@ -189,13 +195,12 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Select Author</label>
-            <AssignedUserSelect
-              assignedUserId={formState.authorUserId}
-              setAssignedUserId={(value) => setFormState({ ...formState, authorUserId: value })}
-              label="Select Author"
-              className={selectStyles}
-              required
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Author</label>
+            <input 
+              type="text" 
+              value={currentUser?.username || currentUser?.email || ''} 
+              className={inputStyles}
+              disabled 
             />
           </div>
 
@@ -215,11 +220,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
               type="text"
               className={inputStyles}
               placeholder="Tags (comma-separated)"
-              value={formState.tags.join(', ')}
-              onChange={(e) => {
-                const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-                setFormState({ ...formState, tags });
-              }}
+              value={formState.tags}
+              onChange={(e) => setFormState({ ...formState, tags: e.target.value })}
             />
           </div>
 

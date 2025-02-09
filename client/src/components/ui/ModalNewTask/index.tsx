@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { formatISO } from "date-fns";
-import { Priority, Status, useCreateTaskMutation } from "@/lib/api/api";
+import { Priority, Status, useCreateTaskMutation, useGetCurrentUserQuery } from "@/lib/api/api";
 import FormModal from "@/components/ui/FormModal";
 import AssignedUserSelect from "@/components/common/AssignedUserSelect";
 import { toast } from 'react-toastify';
@@ -16,6 +16,7 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
   onClose, 
   id = null 
 }) => {
+  const { data: currentUser } = useGetCurrentUserQuery();
   const [createTask, { isLoading }] = useCreateTaskMutation();
   const [formState, setFormState] = useState({
     title: '',
@@ -29,6 +30,16 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
     assignedUserId: '',
     projectId: '',
   });
+
+  // Set current user as author when component mounts or current user changes
+  useEffect(() => {
+    if (currentUser) {
+      setFormState(prev => ({
+        ...prev,
+        authorUserId: String(currentUser.userId)
+      }));
+    }
+  }, [currentUser]);
 
   const resetForm = useCallback(() => {
     setFormState({
@@ -55,20 +66,32 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
   const handleSubmit = async () => {
     if (!isFormValid) return;
 
+    // Ensure authorUserId is set to current user
+    const authorId = currentUser ? currentUser.userId : undefined;
+    if (!authorId) {
+      toast.error('Unable to create task: User not authenticated', {
+        position: 'bottom-right',
+        autoClose: 3000,
+      });
+      return;
+    }
+
     try {
       await createTask({
         title: formState.title.trim(),
         description: formState.description.trim() || undefined,
         status: formState.status,
         priority: formState.priority,
-        tags: formState.tags.length > 0 ? formState.tags.join(', ') : undefined,
+        tags: formState.tags.length > 0 
+          ? formState.tags.filter(tag => tag.trim() !== '').map(tag => tag.trim())
+          : undefined,
         startDate: formState.startDate 
           ? formatISO(new Date(formState.startDate)) 
           : undefined,
         dueDate: formState.dueDate 
           ? formatISO(new Date(formState.dueDate)) 
           : undefined,
-        authorUserId: Number(formState.authorUserId),
+        authorUserId: authorId,
         assignedUserId: formState.assignedUserId 
           ? Number(formState.assignedUserId) 
           : undefined,
@@ -186,14 +209,19 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
             />
           </div>
         </div>
-        <div>
-          <AssignedUserSelect
-            assignedUserId={formState.authorUserId}
-            setAssignedUserId={(userId) => setFormState(prev => ({ ...prev, authorUserId: userId }))}
-            label="Author"
-            required
-          />
-        </div>
+        {currentUser && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-white">
+              Author
+            </label>
+            <input 
+              type="text" 
+              value={currentUser?.username || currentUser?.email || ''} 
+              className={inputStyles} 
+              disabled 
+            />
+          </div>
+        )}
         <div>
           <AssignedUserSelect
             assignedUserId={formState.assignedUserId}
