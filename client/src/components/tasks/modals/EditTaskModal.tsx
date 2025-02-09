@@ -7,6 +7,7 @@ import {
 import AssignedUserSelect from "@/components/common/AssignedUserSelect";
 import { Task, useUpdateTaskMutation } from "@/lib/api/api";
 import { formatISO } from "date-fns";
+import { toast } from "react-toastify";
 
 interface EditTaskModalProps {
   open: boolean;
@@ -14,11 +15,18 @@ interface EditTaskModalProps {
   task: Task | null;
 }
 
+interface UpdateTaskPayload {
+  taskId: number;
+  task: Partial<Task> & {
+    tags?: string | string[] | undefined;
+  };
+}
+
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) => {
   const [formState, setFormState] = useState({
     title: "",
     description: "",
-    tags: [],
+    tags: [] as string[],
     startDate: "",
     dueDate: "",
     assignedUserId: "",
@@ -29,25 +37,48 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
 
   useEffect(() => {
     if (task) {
+      // Handle tags as either array or string
+      const parseTags = (tags?: string | string[]) => {
+        if (!tags) return [];
+        
+        // If tags is already an array, trim and filter
+        if (Array.isArray(tags)) {
+          return tags.map(tag => tag.trim()).filter(tag => tag);
+        }
+        
+        // If tags is a string, split and process
+        return tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      };
+
       setFormState({
         title: task.title,
         description: task.description ?? '',
-        tags: task.tags ?? [],
+        tags: parseTags(task.tags),
         startDate: task.startDate ? formatISO(new Date(task.startDate), { representation: "date" }) : '',
         dueDate: task.dueDate ? formatISO(new Date(task.dueDate), { representation: "date" }) : '',
-        assignedUserId: String(task.assignedUserId),
-        authorUserId: String(task.authorUserId),
+        assignedUserId: String(task.assignedUserId ?? ''),
+        authorUserId: String(task.authorUserId ?? ''),
       });
     }
   }, [task]);
 
   const isFormValid = () => {
-    return formState.title && formState.authorUserId;
+    const titleValid = formState.title.trim().length > 0;
+    const authorValid = formState.authorUserId.trim().length > 0;
+    return titleValid && authorValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isFormValid()) {
+      toast.error("Please fill in all required fields", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+
     const formattedStartDate = formState.startDate 
       ? formatISO(new Date(formState.startDate), { representation: 'complete' }) 
       : null;
@@ -60,21 +91,34 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
       if (!task) {
         throw new Error('No task selected');
       }
-      await updateTask({
+
+      const updatePayload: UpdateTaskPayload = {
         taskId: task.id,
         task: {
-          title: formState.title,
-          description: formState.description || undefined,
-          tags: formState.tags.length > 0 ? formState.tags.join(', ') : undefined,
+          title: formState.title.trim(),
+          description: formState.description.trim() || undefined,
+          tags: formState.tags.length > 0 ? formState.tags : undefined,
           startDate: formattedStartDate,
           dueDate: formattedDueDate,
           assignedUserId: formState.assignedUserId ? parseInt(formState.assignedUserId, 10) : undefined,
           authorUserId: formState.authorUserId ? parseInt(formState.authorUserId, 10) : undefined,
         }
+      };
+
+      await updateTask(updatePayload).unwrap();
+
+      toast.success("Task updated successfully", {
+        position: "bottom-right",
+        autoClose: 3000,
       });
+
       onClose();
     } catch (error) {
       console.error("Failed to update task:", error);
+      toast.error("Failed to update task. Please try again.", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     }
   };
 
@@ -116,6 +160,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
             placeholder="Title"
             value={formState.title}
             onChange={(e) => setFormState({ ...formState, title: e.target.value })}
+            required
           />
 
           <textarea
@@ -150,6 +195,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
               setAssignedUserId={(value) => setFormState({ ...formState, authorUserId: value })}
               label="Select Author"
               className={selectStyles}
+              required
             />
           </div>
 
@@ -168,9 +214,12 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
             <input
               type="text"
               className={inputStyles}
-              placeholder="Tags"
+              placeholder="Tags (comma-separated)"
               value={formState.tags.join(', ')}
-              onChange={(e) => setFormState({ ...formState, tags: e.target.value.split(', ') })}
+              onChange={(e) => {
+                const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+                setFormState({ ...formState, tags });
+              }}
             />
           </div>
 
