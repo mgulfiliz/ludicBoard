@@ -8,6 +8,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
 model User {
   userId            Int              @id @default(autoincrement())
   username          String           @unique
@@ -26,6 +33,7 @@ model User {
   authoredTasks     Task[]           @relation("TaskAuthor")
   taskAssignments   TaskAssignment[]
   team              Team?            @relation(fields: [teamId], references: [id])
+  projectMemberships ProjectMembership[]
 }
 
 model Team {
@@ -38,13 +46,14 @@ model Team {
 }
 
 model Project {
-  id           Int           @id @default(autoincrement())
-  name         String
-  description  String?
-  startDate    DateTime?
-  endDate      DateTime?
-  projectTeams ProjectTeam[]
-  tasks        Task[]
+  id               Int                @id @default(autoincrement())
+  name             String
+  description      String?
+  startDate        DateTime?
+  endDate          DateTime?
+  projectTeams     ProjectTeam[]
+  tasks            Task[]
+  memberships      ProjectMembership[]
 }
 
 model ProjectTeam {
@@ -56,24 +65,38 @@ model ProjectTeam {
 }
 
 model Task {
-  id              Int              @id @default(autoincrement())
-  title           String
-  description     String?
-  status          String?
-  priority        String?
-  tags            String?
-  startDate       DateTime?
-  dueDate         DateTime?
-  points          Int?
-  projectId       Int
-  authorUserId    Int
-  assignedUserId  Int?
-  attachments     Attachment[]
-  comments        Comment[]
-  assignee        User?            @relation("TaskAssignee", fields: [assignedUserId], references: [userId])
-  author          User             @relation("TaskAuthor", fields: [authorUserId], references: [userId])
-  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  taskAssignments TaskAssignment[]
+  id               Int               @id @default(autoincrement())
+  title            String
+  description      String?
+  status           String
+  priority         String?
+  points           Int?
+  startDate        DateTime?
+  dueDate          DateTime?
+  tags             String[]
+  projectId        Int
+  project          Project           @relation(fields: [projectId], references: [id])
+  
+  authorUserId     Int
+  author           User              @relation("TaskAuthor", fields: [authorUserId], references: [userId])
+  
+  assignedUserId   Int?
+  assignee         User?             @relation("TaskAssignee", fields: [assignedUserId], references: [userId])
+  
+  comments         Comment[]
+  attachments      Attachment[]
+  taskAssignments  TaskAssignment[]
+}
+
+model ProjectMembership {
+  id        Int         @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      ProjectRole @default(VIEWER)
+  project   Project     @relation(fields: [projectId], references: [id])
+  user      User        @relation(fields: [userId], references: [userId])
+
+  @@unique([projectId, userId])
 }
 
 model TaskAssignment {

@@ -6,25 +6,51 @@ const prisma = new PrismaClient();
 
 export const getTasks = async (req: Request, res: Response): Promise<void> => {
   const { projectId } = req.query;
+  const userId = (req.user as any).userId;
+
+  // Only return tasks from projects user is a member of
   const tasks = await prisma.task.findMany({
-    where: { projectId: Number(projectId) },
+    where: { 
+      projectId: Number(projectId),
+      project: {
+        memberships: {
+          some: { 
+            userId,
+            role: { in: ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'] }
+          }
+        }
+      }
+    },
     include: {
-      author: true,
-      assignee: true,
+      author: {
+        select: {
+          userId: true,
+          username: true,
+          profilePictureUrl: true
+        }
+      },
+      assignee: {
+        select: {
+          userId: true,
+          username: true,
+          profilePictureUrl: true
+        }
+      },
       comments: {
         include: {
           user: {
             select: {
               userId: true,
               username: true,
-              profilePictureUrl: true,
+              profilePictureUrl: true
             }
           }
         }
       },
-      attachments: true,
-    },
+      attachments: true
+    }
   });
+
   res.json(tasks);
 };
 
@@ -54,25 +80,29 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
 
 export const updateTask = async (req: Request, res: Response): Promise<void> => {
   const { taskId } = req.params;
-  const {
-    title, description, status, priority, tags,
-    startDate, dueDate, points, assignedUserId,
-  } = req.body;
+  const userId = (req.user as any).userId;
+  const userTaskPermission = (req as any).userTaskPermission;
+
+  // Restrict update based on permission
+  if (userTaskPermission === 'VIEW') {
+    res.status(403).json({ message: 'You cannot update this task' });
+    return;
+  }
+
+  // If partial permission, limit updatable fields
+  const updateData = userTaskPermission === 'PARTIAL' 
+    ? { 
+        status: req.body.status, 
+        assignedUserId: req.body.assignedUserId 
+      }
+    : req.body;
 
   const updatedTask = await prisma.task.update({
     where: { id: Number(taskId) },
-    data: {
-      title, description, status, priority, tags,
-      startDate: startDate ? new Date(startDate) : undefined,
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      points,
-      assignee: assignedUserId 
-        ? { connect: { userId: assignedUserId } } 
-        : { disconnect: true },
-    },
+    data: updateData
   });
 
-  res.json({ taskId: updatedTask.id });
+  res.json(updatedTask);
 };
 
 export const updateTaskStatus = async (req: Request, res: Response): Promise<void> => {
@@ -141,25 +171,42 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
 };
 
 export const createComment = async (req: Request, res: Response): Promise<void> => {
+  console.log('Create Comment Request:', {
+    params: req.params,
+    body: req.body,
+    user: req.user
+  });
+
   const { taskId } = req.params;
-  const { text, userId } = req.body;
+  // Handle both text and content from the request body
+  const text = req.body.text || req.body.content;
+  const { userId } = req.body;
 
   try {
-    if (!text || !userId || !taskId) 
+    // Use the authenticated user's ID if not provided
+    const commentUserId = userId || (req.user as any)?.userId;
+
+    console.log('Resolved User ID:', commentUserId);
+
+    if (!text || !commentUserId || !taskId) {
+      console.error('Invalid input:', { text, commentUserId, taskId });
       throw new AppError('Invalid input. Text, userId, and taskId are required.', 400);
+    }
 
     const existingTask = await prisma.task.findUnique({
       where: { id: parseInt(taskId, 10) },
       select: { id: true }
     });
 
-    if (!existingTask) 
+    if (!existingTask) {
+      console.error(`Task with ID ${taskId} not found`);
       throw new AppError(`Task with ID ${taskId} not found`, 404);
+    }
 
     const newComment = await prisma.comment.create({
       data: {
         text,
-        userId: parseInt(userId, 10),
+        userId: parseInt(commentUserId, 10),
         taskId: parseInt(taskId, 10)
       },
       include: { 
@@ -167,14 +214,17 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
           select: {
             userId: true,
             username: true,
-            profilePictureUrl: true
+            profilePictureUrl: true,
+            email: true
           }
         } 
       }
     });
 
-    res.status(201).json({ commentId: newComment.id });
+    console.log('Comment created successfully:', newComment);
+    res.status(201).json(newComment);
   } catch (error) {
+    console.error('Error creating comment:', error);
     if (!(error instanceof AppError)) {
       throw new AppError(
         error instanceof Error 
@@ -190,6 +240,7 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
 export const deleteComment = async (req: Request, res: Response): Promise<void> => {
   const { commentId } = req.params;
   const commentIdNum = parseInt(commentId, 10);
+  const userId = (req.user as any)?.userId;
 
   try {
     if (isNaN(commentIdNum)) 
@@ -197,16 +248,41 @@ export const deleteComment = async (req: Request, res: Response): Promise<void> 
 
     const existingComment = await prisma.comment.findUnique({
       where: { id: commentIdNum },
-      select: { id: true }
+      include: { 
+        task: {
+          include: {
+            project: {
+              include: {
+                memberships: {
+                  where: { 
+                    userId,
+                    role: { in: ['OWNER', 'ADMIN', 'MEMBER'] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!existingComment) 
       throw new AppError(`Comment with ID ${commentId} not found`, 404);
 
+    // Check if user is comment author, task creator, or project member
+    const isCommentAuthor = existingComment.userId === userId;
+    const isProjectMember = existingComment.task.project.memberships.length > 0;
+    const isTaskCreator = existingComment.task.authorUserId === userId;
+
+    if (!isCommentAuthor && !isProjectMember && !isTaskCreator) {
+      throw new AppError('You do not have permission to delete this comment', 403);
+    }
+
     await prisma.comment.delete({ where: { id: commentIdNum } });
 
     res.status(200).json({ commentId: commentIdNum });
   } catch (error) {
+    console.error('Delete comment error:', error);
     if (!(error instanceof AppError)) {
       throw new AppError(
         error instanceof Error 
@@ -223,6 +299,7 @@ export const editComment = async (req: Request, res: Response): Promise<void> =>
   const { commentId } = req.params;
   const { text } = req.body;
   const commentIdNum = parseInt(commentId, 10);
+  const userId = (req.user as any)?.userId;
 
   try {
     if (!text) 
@@ -230,11 +307,35 @@ export const editComment = async (req: Request, res: Response): Promise<void> =>
 
     const existingComment = await prisma.comment.findUnique({
       where: { id: commentIdNum },
-      select: { id: true }
+      include: { 
+        task: {
+          include: {
+            project: {
+              include: {
+                memberships: {
+                  where: { 
+                    userId,
+                    role: { in: ['OWNER', 'ADMIN', 'MEMBER'] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!existingComment) 
       throw new AppError(`Comment with ID ${commentId} not found`, 404);
+
+    // Check if user is comment author, task creator, or project member
+    const isCommentAuthor = existingComment.userId === userId;
+    const isProjectMember = existingComment.task.project.memberships.length > 0;
+    const isTaskCreator = existingComment.task.authorUserId === userId;
+
+    if (!isCommentAuthor && !isProjectMember && !isTaskCreator) {
+      throw new AppError('You do not have permission to edit this comment', 403);
+    }
 
     const updatedComment = await prisma.comment.update({
       where: { id: commentIdNum },
@@ -250,8 +351,9 @@ export const editComment = async (req: Request, res: Response): Promise<void> =>
       }
     });
 
-    res.json({ commentId: updatedComment.id });
+    res.json(updatedComment);
   } catch (error) {
+    console.error('Edit comment error:', error);
     if (!(error instanceof AppError)) {
       throw new AppError(
         error instanceof Error 

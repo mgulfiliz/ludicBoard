@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { Comment, Task as TaskType, User } from "@/types";
 import AddCommentForm from "@/components/tasks/forms/AddCommentForm";
 import { Trash2, Edit2, UserIcon } from "lucide-react";
-import { useDeleteCommentMutation, useEditCommentMutation, useGetUsersQuery } from "@/lib/api/api";
+import { useDeleteCommentMutation, useEditCommentMutation, useGetUsersQuery, useGetCurrentUserQuery } from "@/lib/api/api";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 type TaskCommentsProps = {
@@ -21,6 +21,7 @@ export default function TaskComments({
   assignee, 
   author 
 }: TaskCommentsProps) {
+  const { data: currentUser } = useGetCurrentUserQuery();
   const [deleteComment] = useDeleteCommentMutation();
   const [editComment] = useEditCommentMutation();
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
@@ -56,6 +57,19 @@ export default function TaskComments({
       || `User ${comment.userId}`;
     
     return username;
+  };
+
+  const canEditOrDeleteComment = (comment: Comment) => {
+    if (!currentUser) return false;
+
+    // User can edit/delete their own comments
+    if (comment.userId === currentUser.userId) return true;
+
+    // Check if user is a project member or task creator/assignee
+    const isProjectMember = author?.userId === currentUser.userId || 
+                             assignee?.userId === currentUser.userId;
+
+    return isProjectMember;
   };
 
   const handleDeleteComment = async () => {
@@ -187,19 +201,23 @@ export default function TaskComments({
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => startEditing(comment)}
-                            className="text-gray-500 hover:text-gray-700 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          >
-                            <Edit2 size={16} />
-                          </button>
+                          {canEditOrDeleteComment(comment) && (
+                            <>
+                              <button 
+                                onClick={() => startEditing(comment)}
+                                className="text-gray-500 hover:text-gray-700 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              >
+                                <Edit2 size={16} />
+                              </button>
 
-                          <button 
-                            onClick={() => setCommentToDelete(comment.id)}
-                            className="text-red-500 hover:text-red-700 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                              <button 
+                                onClick={() => setCommentToDelete(comment.id)}
+                                className="text-red-500 hover:text-red-700 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
 

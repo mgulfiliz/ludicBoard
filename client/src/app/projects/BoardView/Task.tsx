@@ -28,7 +28,7 @@ const Task = ({
     }),
   }));
 
-  const taskTagsSplit = task.tags ? task.tags.split(",") : [];
+  const taskTagsSplit = task.tags || [];
 
   const formattedStartDate = task.startDate
     ? format(new Date(task.startDate), "P")

@@ -21,6 +21,9 @@ async function deleteAllData() {
     await prisma.task.deleteMany({});
     console.log("Deleted all tasks");
 
+    await prisma.projectMembership.deleteMany({});
+    console.log("Deleted all project memberships");
+
     await prisma.projectTeam.deleteMany({});
     console.log("Deleted all project teams");
 
@@ -162,19 +165,27 @@ async function seedTasks(projects: any[], users: any[]) {
   for (const taskData of tasks) {
     try {
       console.log(`Seeding task: ${taskData.title}`);
+      
+      // Convert tags to an array if it's a string
+      const tags = typeof taskData.tags === 'string' 
+        ? taskData.tags.split(',').map((tag: string) => tag.trim()) 
+        : taskData.tags || [];
+
       const task = await prisma.task.create({
         data: {
           title: taskData.title,
           description: taskData.description,
           status: taskData.status,
           priority: taskData.priority,
-          tags: taskData.tags,
-          startDate: new Date(taskData.startDate),
-          dueDate: new Date(taskData.dueDate),
-          points: taskData.points || null,
-          projectId: projects.find(p => p.id === taskData.projectId)?.id || projects[0].id,
-          authorUserId: users.find(u => u.userId === taskData.authorUserId)?.userId || users[0].userId,
-          assignedUserId: users.find(u => u.userId === taskData.assignedUserId)?.userId || null
+          tags: tags,
+          startDate: taskData.startDate ? new Date(taskData.startDate) : undefined,
+          dueDate: taskData.dueDate ? new Date(taskData.dueDate) : undefined,
+          points: taskData.points,
+          project: { connect: { id: taskData.projectId } },
+          author: { connect: { userId: taskData.authorUserId } },
+          assignee: taskData.assignedUserId 
+            ? { connect: { userId: taskData.assignedUserId } } 
+            : undefined
         }
       });
       createdTasks.push(task);
@@ -197,22 +208,60 @@ async function seedComments(tasks: any[], users: any[]) {
   for (const commentData of comments) {
     try {
       console.log(`Seeding comment for task: ${commentData.taskId}`);
+      
+      // First, verify the task exists
+      const task = await prisma.task.findUnique({
+        where: { id: commentData.taskId }
+      });
+
+      if (!task) {
+        console.warn(`Task with ID ${commentData.taskId} not found. Skipping comment.`);
+        continue;
+      }
+
       const comment = await prisma.comment.create({
         data: {
-          text: commentData.text,
-          taskId: tasks.find(t => t.id === commentData.taskId)?.id || tasks[0].id,
-          userId: users.find(u => u.userId === commentData.userId)?.userId || users[0].userId
+          text: commentData.content || commentData.text,
+          task: { connect: { id: commentData.taskId } },
+          user: { connect: { userId: commentData.userId } }
         }
       });
       createdComments.push(comment);
-      console.log(`Successfully seeded comment`);
+      console.log(`Successfully seeded comment for task ${commentData.taskId}`);
     } catch (error) {
-      console.error(`Error seeding comment:`, error);
+      console.error(`Error seeding comment for task ${commentData.taskId}:`, error);
     }
   }
 
   console.log(`Total comments seeded: ${createdComments.length}`);
   return createdComments;
+}
+
+async function seedProjectMemberships(projects: any[], users: any[]) {
+  console.log("Starting project membership seeding...");
+  const projectMembershipsPath = path.join(__dirname, "seedData", "projectMembership.json");
+  const projectMemberships = JSON.parse(fs.readFileSync(projectMembershipsPath, "utf-8"));
+
+  const createdMemberships = [];
+  for (const membershipData of projectMemberships) {
+    try {
+      console.log(`Seeding project membership for user ${membershipData.userId} in project ${membershipData.projectId}`);
+      const membership = await prisma.projectMembership.create({
+        data: {
+          userId: membershipData.userId,
+          projectId: membershipData.projectId,
+          role: membershipData.role
+        }
+      });
+      createdMemberships.push(membership);
+      console.log(`Successfully seeded project membership for user ${membershipData.userId}`);
+    } catch (error) {
+      console.error(`Error seeding project membership for user ${membershipData.userId}:`, error);
+    }
+  }
+
+  console.log(`Total project memberships seeded: ${createdMemberships.length}`);
+  return createdMemberships;
 }
 
 async function main() {
@@ -229,6 +278,7 @@ async function main() {
     await seedProjectTeams(projects, teams);
     const tasks = await seedTasks(projects, users);
     await seedComments(tasks, users);
+    await seedProjectMemberships(projects, users);
 
     console.log("Seeding completed successfully!");
   } catch (error) {

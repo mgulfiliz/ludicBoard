@@ -15,39 +15,46 @@ interface EditTaskModalProps {
 }
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState<string | null>(null);
-  const [dueDate, setDueDate] = useState<string | null>(null);
-  const [assignedUserId, setAssignedUserId] = useState<string>("");
-  const [authorUserId, setAuthorUserId] = useState<string>("");
+  const [formState, setFormState] = useState({
+    title: "",
+    description: "",
+    tags: [],
+    startDate: "",
+    dueDate: "",
+    assignedUserId: "",
+    authorUserId: "",
+  });
 
   const [updateTask, { isLoading }] = useUpdateTaskMutation();
 
   useEffect(() => {
     if (task) {
-      setTitle(task.title);
-      setDescription(task.description || "");
-      setStartDate(task.startDate ? formatISO(new Date(task.startDate), { representation: "complete" }) : null);
-      setDueDate(task.dueDate ? formatISO(new Date(task.dueDate), { representation: "complete" }) : null);
-      setAssignedUserId(String(task.assignedUserId));
-      setAuthorUserId(String(task.authorUserId));
+      setFormState({
+        title: task.title,
+        description: task.description ?? '',
+        tags: task.tags ?? [],
+        startDate: task.startDate ? formatISO(new Date(task.startDate), { representation: "date" }) : '',
+        dueDate: task.dueDate ? formatISO(new Date(task.dueDate), { representation: "date" }) : '',
+        assignedUserId: String(task.assignedUserId),
+        authorUserId: String(task.authorUserId),
+      });
     }
   }, [task]);
 
   const isFormValid = () => {
-    return title && authorUserId;
+    return formState.title && formState.authorUserId;
   };
 
-  const handleSubmit = async () => {
-    if (!isFormValid()) return;
-
-    const formattedStartDate = startDate
-      ? formatISO(new Date(startDate), { representation: "complete" })
-      : undefined;
-    const formattedDueDate = dueDate
-      ? formatISO(new Date(dueDate), { representation: "complete" })
-      : undefined;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const formattedStartDate = formState.startDate 
+      ? formatISO(new Date(formState.startDate), { representation: 'complete' }) 
+      : null;
+    
+    const formattedDueDate = formState.dueDate 
+      ? formatISO(new Date(formState.dueDate), { representation: 'complete' }) 
+      : null;
 
     try {
       if (!task) {
@@ -56,12 +63,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
       await updateTask({
         taskId: task.id,
         task: {
-          title,
-          description,
+          title: formState.title,
+          description: formState.description || undefined,
+          tags: formState.tags.length > 0 ? formState.tags.join(', ') : undefined,
           startDate: formattedStartDate,
           dueDate: formattedDueDate,
-          assignedUserId: assignedUserId ? parseInt(assignedUserId, 10) : undefined,
-          authorUserId: authorUserId ? parseInt(authorUserId, 10) : undefined,
+          assignedUserId: formState.assignedUserId ? parseInt(formState.assignedUserId, 10) : undefined,
+          authorUserId: formState.authorUserId ? parseInt(formState.authorUserId, 10) : undefined,
         }
       });
       onClose();
@@ -100,24 +108,21 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
 
         <form 
           className="mt-4 space-y-6"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
+          onSubmit={handleSubmit}
         >
           <input
             type="text"
             className={inputStyles}
             placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={formState.title}
+            onChange={(e) => setFormState({ ...formState, title: e.target.value })}
           />
 
           <textarea
             className={inputStyles}
             placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={formState.description}
+            onChange={(e) => setFormState({ ...formState, description: e.target.value })}
             rows={4}
           />
 
@@ -125,15 +130,15 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
             <input
               type="date"
               className={inputStyles}
-              value={startDate?.split("T")[0] || ""}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={formState.startDate}
+              onChange={(e) => setFormState({ ...formState, startDate: e.target.value })}
               placeholder="Start Date"
             />
             <input
               type="date"
               className={inputStyles}
-              value={dueDate?.split("T")[0] || ""}
-              onChange={(e) => setDueDate(e.target.value)}
+              value={formState.dueDate}
+              onChange={(e) => setFormState({ ...formState, dueDate: e.target.value })}
               placeholder="Due Date"
             />
           </div>
@@ -141,8 +146,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
           <div className="space-y-2">
             <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Select Author</label>
             <AssignedUserSelect
-              assignedUserId={authorUserId}
-              setAssignedUserId={setAuthorUserId}
+              assignedUserId={formState.authorUserId}
+              setAssignedUserId={(value) => setFormState({ ...formState, authorUserId: value })}
               label="Select Author"
               className={selectStyles}
             />
@@ -151,10 +156,21 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
           <div className="space-y-2">
             <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Select Team Members</label>
             <AssignedUserSelect
-              assignedUserId={assignedUserId}
-              setAssignedUserId={setAssignedUserId}
+              assignedUserId={formState.assignedUserId}
+              setAssignedUserId={(value) => setFormState({ ...formState, assignedUserId: value })}
               label="Select Team Members"
               className={selectStyles}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Tags</label>
+            <input
+              type="text"
+              className={inputStyles}
+              placeholder="Tags"
+              value={formState.tags.join(', ')}
+              onChange={(e) => setFormState({ ...formState, tags: e.target.value.split(', ') })}
             />
           </div>
 

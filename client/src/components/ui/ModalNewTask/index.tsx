@@ -22,7 +22,7 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
     description: '',
     status: Status.ToDo,
     priority: Priority.Backlog,
-    tags: '',
+    tags: [] as string[],
     startDate: '',
     dueDate: '',
     authorUserId: '',
@@ -36,7 +36,7 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
       description: '',
       status: Status.ToDo,
       priority: Priority.Backlog,
-      tags: '',
+      tags: [] as string[],
       startDate: '',
       dueDate: '',
       authorUserId: '',
@@ -61,7 +61,7 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
         description: formState.description.trim() || undefined,
         status: formState.status,
         priority: formState.priority,
-        tags: formState.tags.trim() || undefined,
+        tags: formState.tags.length > 0 ? formState.tags.join(', ') : undefined,
         startDate: formState.startDate 
           ? formatISO(new Date(formState.startDate)) 
           : undefined,
@@ -131,8 +131,8 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
           <label className="block text-sm font-medium text-gray-700 dark:text-white">Tags</label>
           <input
             type="text"
-            value={formState.tags}
-            onChange={(e) => setFormState(prev => ({ ...prev, tags: e.target.value }))}
+            value={formState.tags.join(', ')}
+            onChange={(e) => setFormState(prev => ({ ...prev, tags: e.target.value.split(',').map(tag => tag.trim()) }))}
             className={inputStyles}
           />
         </div>

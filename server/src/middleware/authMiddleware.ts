@@ -28,7 +28,7 @@ declare global {
 }
 
 // Middleware to protect routes
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   let token;
 
   // Check if token exists in Authorization header
@@ -59,21 +59,28 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
       });
 
       if (!user) {
-        return res.status(401).json({ message: 'Not authorized' });
+        return res.status(401).json({ message: 'Not authorized, user not found' });
       }
 
       // Attach user to request object
-      req.user = user;
+      req.user = {
+        userId: user.userId,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        profilePictureUrl: user.profilePictureUrl
+      };
+
       next();
     } catch (error) {
-      // Silently handle token verification errors
-      res.status(401).json({ message: 'Not authorized' });
+      console.error(error);
+      return res.status(401).json({ message: 'Not authorized, invalid token' });
     }
   }
 
   // If no token
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 

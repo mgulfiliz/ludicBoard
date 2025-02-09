@@ -2,11 +2,11 @@ import express from 'express';
 import { 
   registerUser, 
   loginUser, 
-  protect,
   getCurrentUser,
   updateProfile,
   changePassword
 } from '../middleware/authMiddleware';
+import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -30,12 +30,12 @@ router.get('/logout', (req, res) => {
 });
 
 // Get current user (protected route)
-router.get('/me', protect, getCurrentUser);
+router.get('/me', authenticateToken, getCurrentUser);
 
 // Update profile route (protected)
-router.patch('/update-profile', protect, updateProfile);
+router.patch('/update-profile', authenticateToken, updateProfile);
 
 // Change password route (protected)
-router.patch('/change-password', protect, changePassword);
+router.patch('/change-password', authenticateToken, changePassword);
 
 export default router;
