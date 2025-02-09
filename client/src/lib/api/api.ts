@@ -372,23 +372,35 @@ export const api = createApi({
           ? [{ type: CACHE_TAGS.Tasks, id: taskId }]
           : [],
     }),
-    createTask: build.mutation<Task, Partial<Task>>({
-      query: (task) => ({
-        url: "tasks",
-        method: "POST",
-        body: task,
+    createTask: build.mutation<{ taskId: number, assignedUserIds?: number[] }, Partial<Task>>({
+      query: (taskData) => ({
+        url: '/tasks',
+        method: 'POST',
+        body: {
+          ...taskData,
+          // Ensure backward compatibility
+          assignedUserId: taskData.assignedUserIds && taskData.assignedUserIds.length > 0 
+            ? taskData.assignedUserIds[0] 
+            : undefined,
+        }
       }),
-      invalidatesTags: [CACHE_TAGS.Tasks, CACHE_TAGS.Projects],
+      invalidatesTags: [CACHE_TAGS.Tasks],
       transformResponse: (response: Task) => ({
         ...response,
         createdAt: new Date().toISOString()
       }),
     }),
-    updateTask: build.mutation<Task, { taskId: number; task: Partial<Task> }>({
+    updateTask: build.mutation<{ assignedUserIds?: number[] } & Task, { taskId: number; task: Partial<Task> }>({
       query: ({ taskId, task }) => ({
-        url: `tasks/${taskId}`,
-        method: "PATCH",
-        body: task,
+        url: `/tasks/${taskId}`,
+        method: 'PATCH',
+        body: {
+          ...task,
+          // Ensure backward compatibility
+          assignedUserId: task.assignedUserIds && task.assignedUserIds.length > 0 
+            ? task.assignedUserIds[0] 
+            : undefined,
+        }
       }),
       invalidatesTags: (result, error, { taskId }) => [
         { type: CACHE_TAGS.Tasks, id: taskId },

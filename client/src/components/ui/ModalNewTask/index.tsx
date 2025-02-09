@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { formatISO } from "date-fns";
-import { Priority, Status, useCreateTaskMutation, useGetCurrentUserQuery } from "@/lib/api/api";
+import { Priority, Status, useCreateTaskMutation, useGetCurrentUserQuery, Task } from "@/lib/api/api";
 import FormModal from "@/components/ui/FormModal";
 import AssignedUserSelect from "@/components/common/AssignedUserSelect";
 import { toast } from 'react-toastify';
@@ -27,7 +27,7 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
     startDate: '',
     dueDate: '',
     authorUserId: '',
-    assignedUserId: '',
+    assignedUserIds: [] as string[],
     projectId: '',
   });
 
@@ -51,7 +51,7 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
       startDate: '',
       dueDate: '',
       authorUserId: '',
-      assignedUserId: '',
+      assignedUserIds: [] as string[],
       projectId: '',
     });
   }, []);
@@ -78,10 +78,9 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
 
     try {
       await createTask({
+        ...formState,
         title: formState.title.trim(),
         description: formState.description.trim() || undefined,
-        status: formState.status,
-        priority: formState.priority,
         tags: formState.tags.length > 0 
           ? formState.tags.filter(tag => tag.trim() !== '').map(tag => tag.trim())
           : undefined,
@@ -92,13 +91,13 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
           ? formatISO(new Date(formState.dueDate)) 
           : undefined,
         authorUserId: authorId,
-        assignedUserId: formState.assignedUserId 
-          ? Number(formState.assignedUserId) 
+        assignedUserIds: formState.assignedUserIds.length > 0 
+          ? formState.assignedUserIds.map(Number)
           : undefined,
         projectId: id !== null 
           ? Number(id) 
           : Number(formState.projectId),
-      }).unwrap();
+      } as Partial<Task>).unwrap();
 
       resetForm();
       onClose();
@@ -223,10 +222,13 @@ const ModalNewTask: React.FC<ModalNewTaskProps> = ({
           </div>
         )}
         <div>
-          <AssignedUserSelect
-            assignedUserId={formState.assignedUserId}
-            setAssignedUserId={(userId) => setFormState(prev => ({ ...prev, assignedUserId: userId }))}
-            label="Assigned To"
+          <label className="block text-sm font-medium text-gray-700 dark:text-white">Assigned Users</label>
+          <AssignedUserSelect 
+            assignedUserIds={formState.assignedUserIds}
+            setAssignedUserIds={(userIds) => setFormState(prev => ({ ...prev, assignedUserIds: userIds }))}
+            multiple={true}
+            label="Select Assigned Users"
+            className={inputStyles}
           />
         </div>
         {id === null && (

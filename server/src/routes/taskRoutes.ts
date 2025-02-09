@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { body, param } from 'express-validator';
 import asyncHandler from 'express-async-handler';
 import {
@@ -16,6 +16,36 @@ import { authenticateToken } from "../middleware/authMiddleware";
 import { checkProjectAccess, checkTaskPermission } from "../middleware/permissionMiddleware";
 import { validateRequest } from "../middleware/errorHandler";
 
+// Define an interface for the authenticated user in the request
+interface User {
+  userId: number;
+  username: string;
+  email: string;
+  profilePictureUrl?: string;
+  teamId?: number;
+}
+
+// Type guard to check if a request is authenticated
+function isAuthenticatedRequest(req: Request): req is Request & { user: User } {
+  return req.user !== undefined && 
+         typeof req.user === 'object' && 
+         'userId' in req.user &&
+         'username' in req.user &&
+         'email' in req.user;
+}
+
+// Middleware to ensure type safety
+const ensureAuthenticatedRequest = (
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+) => {
+  if (!isAuthenticatedRequest(req)) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  next();
+};
+
 const router = Router();
 
 router.post(
@@ -26,23 +56,26 @@ router.post(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   checkProjectAccess,
   asyncHandler(async (req: Request, res: Response) => {
-    await createTask(req, res);
+    // Type assertion to help TypeScript understand the request is authenticated
+    await createTask(req as Request & { user: User }, res);
   })
 );
 
 router.get(
   "/", 
   authenticateToken,
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     // Temporarily move projectId from query to params for middleware
     (req.params as any).projectId = req.query.projectId;
     next();
   },
+  ensureAuthenticatedRequest,
   checkProjectAccess,
   asyncHandler(async (req: Request, res: Response) => {
-    await getTasks(req, res);
+    await getTasks(req as Request & { user: User }, res);
   })
 );
 
@@ -53,9 +86,10 @@ router.patch(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   checkTaskPermission,
   asyncHandler(async (req: Request, res: Response) => {
-    await updateTask(req, res);
+    await updateTask(req as Request & { user: User }, res);
   })
 );
 
@@ -66,9 +100,10 @@ router.patch(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   checkTaskPermission,
   asyncHandler(async (req: Request, res: Response) => {
-    await updateTaskStatus(req, res);
+    await updateTaskStatus(req as Request & { user: User }, res);
   })
 );
 
@@ -79,8 +114,9 @@ router.get(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   asyncHandler(async (req: Request, res: Response) => {
-    await getUserTasks(req, res);
+    await getUserTasks(req as Request & { user: User }, res);
   })
 );
 
@@ -91,9 +127,10 @@ router.delete(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   checkTaskPermission,
   asyncHandler(async (req: Request, res: Response) => {
-    await deleteTask(req, res);
+    await deleteTask(req as Request & { user: User }, res);
   })
 );
 
@@ -113,14 +150,10 @@ router.post(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   checkTaskPermission,
   asyncHandler(async (req: Request, res: Response) => {
-    console.log('Comment Creation Request:', {
-      params: req.params,
-      body: req.body,
-      user: req.user
-    });
-    await createComment(req, res);
+    await createComment(req as Request & { user: User }, res);
   })
 );
 
@@ -131,12 +164,9 @@ router.delete(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   asyncHandler(async (req: Request, res: Response) => {
-    console.log('Delete Comment Request:', {
-      params: req.params,
-      user: req.user
-    });
-    await deleteComment(req, res);
+    await deleteComment(req as Request & { user: User }, res);
   })
 );
 
@@ -152,13 +182,9 @@ router.patch(
   ],
   validateRequest,
   authenticateToken,
+  ensureAuthenticatedRequest,
   asyncHandler(async (req: Request, res: Response) => {
-    console.log('Edit Comment Request:', {
-      params: req.params,
-      body: req.body,
-      user: req.user
-    });
-    await editComment(req, res);
+    await editComment(req as Request & { user: User }, res);
   })
 );
 

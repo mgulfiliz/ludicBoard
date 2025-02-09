@@ -43,9 +43,9 @@ export interface Task {
   points?: number;
   projectId: number;
   authorUserId?: number;
-  assignedUserId?: number;
+  assignedUserIds?: number[];
   author?: User;
-  assignee?: User;
+  assignees?: User[];
   comments?: Comment[];
   attachments?: Attachment[];
 }

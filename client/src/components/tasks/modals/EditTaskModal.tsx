@@ -17,9 +17,7 @@ interface EditTaskModalProps {
 
 interface UpdateTaskPayload {
   taskId: number;
-  task: Partial<Task> & {
-    tags?: string | string[] | undefined;
-  };
+  task: Partial<Task>;
 }
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) => {
@@ -30,7 +28,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
     tags: "" as string,
     startDate: "",
     dueDate: "",
-    assignedUserId: "",
+    assignedUserIds: [] as string[],
     authorUserId: currentUser?.userId ? String(currentUser.userId) : '',
   });
 
@@ -42,13 +40,18 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
         ? task.tags.filter(tag => tag?.trim?.()).join(', ') 
         : task.tags || '';
 
+      // Support both single and multiple user assignments
+      const assignedUserIds = task.assignedUserIds 
+        ? task.assignedUserIds.map(String) 
+        : (task.assignedUserId ? [String(task.assignedUserId)] : []);
+
       setFormState({
         title: task.title,
         description: task.description ?? '',
         tags: tagsString,
         startDate: task.startDate ? formatISO(new Date(task.startDate), { representation: "date" }) : '',
         dueDate: task.dueDate ? formatISO(new Date(task.dueDate), { representation: "date" }) : '',
-        assignedUserId: String(task.assignedUserId ?? ''),
+        assignedUserIds: assignedUserIds,
         authorUserId: String(task.authorUserId ?? ''),
       });
     }
@@ -106,7 +109,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
           tags: processTags.length > 0 ? processTags : undefined,
           startDate: formattedStartDate,
           dueDate: formattedDueDate,
-          assignedUserId: formState.assignedUserId ? parseInt(formState.assignedUserId, 10) : undefined,
+          assignedUserIds: formState.assignedUserIds.length > 0 
+            ? formState.assignedUserIds.map(id => parseInt(id, 10)) 
+            : undefined,
           authorUserId: currentUser.userId, // Always use current user's ID
         }
       };
@@ -195,45 +200,49 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
           </div>
 
           <div className="space-y-2">
+            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Assigned Users</label>
+            <AssignedUserSelect 
+              assignedUserIds={formState.assignedUserIds}
+              setAssignedUserIds={(userIds) => setFormState({ ...formState, assignedUserIds: userIds })}
+              multiple={true}
+              label="Select Assigned Users"
+            />
+          </div>
+
+          <div className="space-y-2">
             <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Author</label>
             <input 
               type="text" 
               value={currentUser?.username || currentUser?.email || ''} 
-              className={inputStyles}
               disabled 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Select Team Members</label>
-            <AssignedUserSelect
-              assignedUserId={formState.assignedUserId}
-              setAssignedUserId={(value) => setFormState({ ...formState, assignedUserId: value })}
-              label="Select Team Members"
-              className={selectStyles}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Tags</label>
-            <input
-              type="text"
               className={inputStyles}
-              placeholder="Tags (comma-separated)"
-              value={formState.tags}
-              onChange={(e) => setFormState({ ...formState, tags: e.target.value })}
             />
           </div>
 
-          <button
-            type="submit"
-            className={`focus-offset-2 mt-4 flex w-full justify-center rounded-md border border-transparent bg-blue-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
-              !isFormValid() || isLoading ? "cursor-not-allowed opacity-50" : ""
-            }`}
-            disabled={!isFormValid() || isLoading}
-          >
-            {isLoading ? "Updating..." : "Update Task"}
-          </button>
+          <input
+            type="text"
+            className={inputStyles}
+            placeholder="Tags (comma-separated)"
+            value={formState.tags}
+            onChange={(e) => setFormState({ ...formState, tags: e.target.value })}
+          />
+
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-tertiary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+            >
+              {isLoading ? 'Updating...' : 'Update Task'}
+            </button>
+          </div>
         </form>
       </Box>
     </Modal>
