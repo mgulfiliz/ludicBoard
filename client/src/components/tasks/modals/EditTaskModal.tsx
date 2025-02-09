@@ -109,14 +109,20 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
           tags: processTags.length > 0 ? processTags : undefined,
           startDate: formattedStartDate,
           dueDate: formattedDueDate,
+          // Explicitly handle assignedUserIds
           assignedUserIds: formState.assignedUserIds.length > 0 
             ? formState.assignedUserIds.map(id => parseInt(id, 10)) 
-            : undefined,
+            : [], // Send an empty array to remove all assignments
           authorUserId: currentUser.userId, // Always use current user's ID
         }
       };
 
-      await updateTask(updatePayload).unwrap();
+      console.log('Update Payload:', updatePayload); // Add logging for debugging
+
+      const updatedTask = await updateTask(updatePayload).unwrap();
+
+      console.log('Updated Task Response:', updatedTask);
+      console.log('Assigned User IDs:', updatedTask.assignedUserIds);
 
       toast.success("Task updated successfully", {
         position: "bottom-right",
@@ -182,6 +188,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
             rows={4}
           />
 
+          <input
+            type="text"
+            className={inputStyles}
+            placeholder="Tags (comma-separated)"
+            value={formState.tags}
+            onChange={(e) => setFormState({ ...formState, tags: e.target.value })}
+          />
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-2">
             <input
               type="date"
@@ -199,46 +213,55 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ open, onClose, task }) =>
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Assigned Users</label>
-            <AssignedUserSelect 
-              assignedUserIds={formState.assignedUserIds}
-              setAssignedUserIds={(userIds) => setFormState({ ...formState, assignedUserIds: userIds })}
-              multiple={true}
-              label="Select Assigned Users"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm text-gray-700 dark:text-gray-300 mb-4">Author</label>
-            <input 
-              type="text" 
-              value={currentUser?.username || currentUser?.email || ''} 
-              disabled 
-              className={inputStyles}
-            />
-          </div>
-
-          <input
-            type="text"
-            className={inputStyles}
-            placeholder="Tags (comma-separated)"
-            value={formState.tags}
-            onChange={(e) => setFormState({ ...formState, tags: e.target.value })}
+          <AssignedUserSelect
+            assignedUserIds={formState.assignedUserIds}
+            setAssignedUserIds={(userIds) => 
+              setFormState({ ...formState, assignedUserIds: userIds })
+            }
+            multiple={true}
+            label="Select Assignees"
+            className="mb-4"
           />
 
           <div className="flex justify-end space-x-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-white dark:hover:bg-dark-tertiary"
+              className="
+                rounded-md 
+                border 
+                border-gray-300 
+                px-4 
+                py-2 
+                text-sm 
+                text-gray-700 
+                hover:bg-gray-50 
+                dark:border-dark-tertiary 
+                dark:text-white 
+                dark:hover:bg-dark-tertiary
+              "
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+              className="
+                rounded-md 
+                bg-blue-600 
+                px-4 
+                py-2 
+                text-sm 
+                text-white 
+                hover:bg-blue-700 
+                focus:outline-none 
+                focus:ring-2 
+                focus:ring-blue-500 
+                focus:ring-offset-2 
+                dark:bg-blue-500 
+                dark:hover:bg-blue-600
+                disabled:opacity-50
+              "
             >
               {isLoading ? 'Updating...' : 'Update Task'}
             </button>

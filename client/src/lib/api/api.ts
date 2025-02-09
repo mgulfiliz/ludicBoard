@@ -396,12 +396,21 @@ export const api = createApi({
         method: 'PATCH',
         body: {
           ...task,
-          // Ensure backward compatibility
+          // Ensure backward compatibility and handle empty array
           assignedUserId: task.assignedUserIds && task.assignedUserIds.length > 0 
             ? task.assignedUserIds[0] 
-            : undefined,
+            : null,
+          // Explicitly send empty array if no assignees
+          assignedUserIds: task.assignedUserIds || [],
         }
       }),
+      transformResponse: (response: { assignedUserIds?: number[] } & Task) => {
+        // Ensure assignedUserIds is always an array, even if undefined
+        return {
+          ...response,
+          assignedUserIds: response.assignedUserIds || []
+        };
+      },
       invalidatesTags: (result, error, { taskId }) => [
         { type: CACHE_TAGS.Tasks, id: taskId },
         CACHE_TAGS.Projects,

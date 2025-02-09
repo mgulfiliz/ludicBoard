@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useDrag } from "react-dnd";
-import { Task as TaskType } from "@/types";
+import { Task as TaskType, User } from "@/types";
 import { MessageSquareMore, UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
 import TaskActions from "@/components/tasks/actions/TaskActions";
 import TaskComments from "./TaskComments";
+import { Tooltip } from "@mui/material";
 
 type TaskProps = {
   task: TaskType;
@@ -39,25 +40,58 @@ const Task = ({
 
   const numberOfComments = (task.comments && task.comments.length) || 0;
 
-  const UserAvatar = ({ user }: { user: TaskType['assignee'] | TaskType['author'] }) => {
+  // Combine author and assignees
+  const allUsers = React.useMemo(() => {
+    const users: (User & { isAuthor?: boolean })[] = [];
+    
+    // Add author first if exists
+    if (task.author) {
+      users.push({ ...task.author, isAuthor: true });
+    }
+
+    // Add assignees, avoiding duplicates
+    const assignedUsers = task.assignees || [];
+
+    assignedUsers.forEach(assignee => {
+      if (!users.some(u => u.userId === assignee.userId)) {
+        users.push({ ...assignee, isAuthor: false });
+      }
+    });
+
+    return users;
+  }, [task]);
+
+  const UserAvatar = ({ user, isAuthor }: { 
+    user: User, 
+    isAuthor?: boolean 
+  }) => {
     if (!user) return null;
     
-    return user.profilePictureUrl ? (
+    const avatarContent = user.profilePictureUrl ? (
       <Image
         key={user.userId}
         src={`/${user.profilePictureUrl}`}
         alt={user.username}
         width={30}
         height={30}
-        className="h-8 w-8 rounded-full border-2 border-white object-cover dark:border-dark-secondary"
+        className="h-8 w-8 rounded-full border-2 border-white object-cover dark:border-dark-secondary z-10"
         onError={(e) => {
           (e.target as HTMLImageElement).src = '/default-avatar.png';
         }}
       />
     ) : (
-      <div className="h-8 w-8 rounded-full border-2 border-white dark:border-dark-secondary bg-gray-300 dark:bg-neutral-600 flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full border-2 border-white dark:border-dark-secondary bg-gray-300 dark:bg-neutral-600 flex items-center justify-center z-10">
         <UserIcon size={20} className="text-gray-500 dark:text-neutral-400" />
       </div>
+    );
+
+    return (
+      <Tooltip 
+        title={`${user.username}${isAuthor ? ' (Author)' : ''}`} 
+        placement="top"
+      >
+        {avatarContent}
+      </Tooltip>
     );
   };
 
@@ -137,14 +171,26 @@ const Task = ({
         </p>
         <div className="mt-4 border-t border-gray-200 dark:border-stroke-dark" />
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center">
-            <UserAvatar user={task.author} />
-            <div className="ml-2 flex -space-x-[6px] overflow-hidden">
-              <UserAvatar user={task.assignee} />
-            </div>
+        <div className="mt-3 flex items-center justify-between relative">
+          <div className="flex items-center -space-x-[6px] overflow-hidden relative z-10">
+            {allUsers.slice(0, 3).map((user) => (
+              <div key={user.userId} className="relative">
+                <UserAvatar 
+                  user={user} 
+                  isAuthor={user.isAuthor}
+                />
+              </div>
+            ))}
+            {allUsers.length > 3 && (
+              <div 
+                className="w-8 h-8 rounded-full bg-gray-200 dark:bg-dark-tertiary flex items-center justify-center text-xs font-bold text-gray-600 dark:text-white border-2 border-white dark:border-dark-secondary"
+                title={`${allUsers.length - 3} more users`}
+              >
+                +{allUsers.length - 3}
+              </div>
+            )}
           </div>
-          <div className="flex items-center text-gray-500 dark:text-neutral-500">
+          <div className="flex items-center text-gray-500 dark:text-neutral-500 relative z-20">
             <button 
               onClick={() => setShowComments(!showComments)}
               className="flex items-center hover:text-gray-700 dark:hover:text-neutral-400 transition-colors"
@@ -156,15 +202,15 @@ const Task = ({
             </button>
           </div>
         </div>
+        
+        {showComments && (
+          <TaskComments 
+            taskId={task.id} 
+            comments={task.comments || []} 
+            author={task.author}
+          />
+        )}
       </div>
-      {showComments && (
-        <TaskComments 
-          taskId={task.id} 
-          comments={task.comments || []} 
-          assignee={task.assignee}
-          author={task.author}
-        />
-      )}
     </div>
   );
 };

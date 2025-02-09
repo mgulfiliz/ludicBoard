@@ -208,27 +208,32 @@ export const updateTask = async (req: AuthenticatedRequest, res: Response): Prom
 
   const { assignedUserIds, ...otherUpdateData } = req.body;
 
-  const updatedTask = await prisma.task.update({
-    where: { id: Number(taskId) },
-    data: {
-      ...otherUpdateData,
-      // Maintain backward compatibility
-      assignedUserId: assignedUserIds && assignedUserIds.length > 0 
-        ? Number(assignedUserIds[0]) 
-        : null,
-      // Remove existing task assignments
-      taskAssignments: {
-        deleteMany: {},
-      },
-      // Add new task assignments if provided
-      ...(assignedUserIds ? {
-        taskAssignments: {
+  // Prepare the update data object
+  const updateData: Prisma.TaskUpdateInput = {
+    ...otherUpdateData,
+    // Always set assignedUserId to null when no assignees
+    assignedUserId: assignedUserIds && assignedUserIds.length > 0 
+      ? Number(assignedUserIds[0]) 
+      : null,
+  };
+
+  // Handle task assignments separately
+  if (assignedUserIds) {
+    // If assignedUserIds is an empty array, delete all assignments
+    // If assignedUserIds has values, create new assignments
+    updateData.taskAssignments = assignedUserIds.length > 0 
+      ? { 
+          deleteMany: {}, 
           create: assignedUserIds.map((userId: number) => ({
             user: { connect: { userId: Number(userId) } }
           }))
         }
-      } : {}),
-    },
+      : { deleteMany: {} };
+  }
+
+  const updatedTask = await prisma.task.update({
+    where: { id: Number(taskId) },
+    data: updateData,
     include: {
       taskAssignments: {
         include: {
@@ -238,6 +243,7 @@ export const updateTask = async (req: AuthenticatedRequest, res: Response): Prom
     }
   });
 
+  // Explicitly return an empty assignedUserIds array when no assignments
   res.json({ 
     ...updatedTask,
     assignedUserIds: updatedTask.taskAssignments.map(assignment => assignment.user.userId)

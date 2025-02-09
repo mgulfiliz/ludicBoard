@@ -4,9 +4,33 @@ import { format } from "date-fns";
 import { toast } from "react-toastify";
 import { Comment, Task as TaskType, User } from "@/types";
 import AddCommentForm from "@/components/tasks/forms/AddCommentForm";
-import { Trash2, Edit2, UserIcon } from "lucide-react";
+import { Trash2, Edit2, UserIcon, MessageSquareMore, MessageSquareOff } from "lucide-react";
 import { useDeleteCommentMutation, useEditCommentMutation, useGetUsersQuery, useGetCurrentUserQuery } from "@/lib/api/api";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+
+const formatRelativeTime = (date: Date | string) => {
+  const parsedDate = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - parsedDate.getTime()) / 1000);
+
+  if (diffInSeconds < 5) return 'now';
+  if (diffInSeconds < 60) return `${diffInSeconds}s`;
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays}d`;
+  
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return `${diffInMonths}mo`;
+  
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears}y`;
+};
 
 type TaskCommentsProps = {
   taskId: number;
@@ -149,119 +173,120 @@ export default function TaskComments({
   };
 
   return (
-    <>
-      <div className="px-4 pb-4 md:px-6">
-        <div className="border-t border-gray-200 dark:border-stroke-dark pt-3">
-          <h5 className="text-sm font-semibold mb-2 dark:text-white">Comments</h5>
-          
-          {comments.length > 0 ? (
-            <div className="space-y-3">
-              {comments.map((comment, index) => {
-                const profilePictureUrl = findUserProfilePicture(comment.userId);
-
-                const username = getUserName(comment);
-
-                return (
-                  <div key={index} className="flex items-start gap-2 group relative">
-                    <div className="h-6 w-6 rounded-full overflow-hidden flex items-center justify-center">
-                      {profilePictureUrl ? (
-                        <Image
-                          src={`/${profilePictureUrl}`}
-                          alt={username}
-                          width={24}
-                          height={24}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.log('Profile picture error:', profilePictureUrl);
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          <UserIcon size={16} />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium dark:text-white">
-                            {username}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-neutral-500">
-                            {(() => {
-                              const timestamp = comment.createdAt || 
-                                comment.updatedAt || 
-                                new Date().toISOString();
-                              
-                              return format(new Date(timestamp), 'PPp');
-                            })()}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {canEditOrDeleteComment(comment) && (
-                            <>
-                              <button 
-                                onClick={() => startEditing(comment)}
-                                className="text-gray-500 hover:text-gray-700 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-
-                              <button 
-                                onClick={() => setCommentToDelete(comment.id)}
-                                className="text-red-500 hover:text-red-700 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {editingCommentId === comment.id ? (
-                        <div className="mt-1 flex items-center gap-2">
-                          <input 
-                            type="text"
-                            value={editedCommentText}
-                            onChange={(e) => setEditedCommentText(e.target.value)}
-                            className="flex-1 rounded border border-gray-300 p-2 shadow-sm dark:border-dark-tertiary dark:bg-dark-tertiary dark:text-white dark:focus:outline-none"
-                          />
-                          <button 
-                            onClick={() => handleEditComment(comment.id)}
-                            disabled={!editedCommentText.trim()}
-                            className="rounded-md border border-transparent bg-blue-primary px-3 py-2 text-sm text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50"
-                          >
-                            Save
-                          </button>
-                          <button 
-                            onClick={cancelEditing}
-                            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50 dark:border-dark-tertiary dark:text-white dark:hover:bg-dark-secondary"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-600 dark:text-neutral-400 mt-1">
-                          {comment.text}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-neutral-500">No comments yet</p>
-          )}
-          <AddCommentForm 
-            taskId={taskId} 
-            onCommentAdded={() => {/* Maybe refresh logic? */}}
-          />
+    <div className="px-4 pb-4 md:px-6">
+      <div className="border-t border-gray-200 dark:border-stroke-dark pt-3">
+        <div className="flex items-center justify-between mb-3">
+          <h5 className="text-sm font-semibold dark:text-white flex items-center gap-2">
+            Comments 
+            <span className="ml-2 text-xs bg-gray-200 dark:bg-neutral-700 text-gray-600 dark:text-neutral-300 px-2 py-0.5 rounded-full">
+              {comments.length}
+            </span>
+          </h5>
         </div>
+        
+        {comments.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-neutral-500 text-center py-4">
+            No comments yet
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {comments.map((comment, index) => {
+              const profilePictureUrl = findUserProfilePicture(comment.userId);
+              const username = getUserName(comment);
+              const isEditing = editingCommentId === comment.id;
+
+              return (
+                <div 
+                  key={index} 
+                  className="flex items-start gap-2 group relative"
+                >
+                  <div className="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center">
+                    {profilePictureUrl ? (
+                      <Image
+                        src={`/${profilePictureUrl}`}
+                        alt={username}
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/default-avatar.png';
+                        }}
+                      />
+                    ) : (
+                      <UserIcon size={20} className="text-gray-500" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium dark:text-white">
+                          {username}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-neutral-500">
+                          {formatRelativeTime(comment.createdAt || comment.updatedAt || new Date())}
+                        </span>
+                      </div>
+                      
+                      {canEditOrDeleteComment(comment) && (
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button 
+                            onClick={() => startEditing(comment)}
+                            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+
+                          <button 
+                            onClick={() => setCommentToDelete(comment.id)}
+                            className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {isEditing ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <input 
+                          type="text"
+                          value={editedCommentText}
+                          onChange={(e) => setEditedCommentText(e.target.value)}
+                          className="flex-1 rounded border border-gray-300 p-2 shadow-sm dark:border-dark-tertiary dark:bg-dark-tertiary dark:text-white dark:focus:outline-none"
+                        />
+                        <button 
+                          onClick={() => handleEditComment(comment.id)}
+                          disabled={!editedCommentText.trim()}
+                          className="rounded-md border border-transparent bg-blue-primary px-3 py-2 text-sm text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button 
+                          onClick={cancelEditing}
+                          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50 dark:border-dark-tertiary dark:text-white dark:hover:bg-dark-secondary"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600 dark:text-neutral-400 mt-1">
+                        {comment.text}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Move AddCommentForm to the bottom */}
+      <div className="mt-4 border-t border-gray-200 dark:border-stroke-dark pt-3">
+        <AddCommentForm taskId={taskId} />
+      </div>
+
       <ConfirmationModal 
         isOpen={commentToDelete !== null}
         onClose={() => setCommentToDelete(null)}
@@ -271,6 +296,6 @@ export default function TaskComments({
         confirmText="Delete"
         cancelText="Cancel"
       />
-    </>
+    </div>
   );
 };

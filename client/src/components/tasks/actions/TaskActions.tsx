@@ -110,72 +110,70 @@ const TaskActions = ({ task, handleEditTask, handleDeleteTask }: TaskActionsProp
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Button to toggle dropdown */}
+    <div className="relative z-30">
       <button
         ref={buttonRef}
-        className="flex h-6 w-4 flex-shrink-0 items-center justify-center dark:text-neutral-500"
         onClick={toggleDropdown}
-        aria-label="Task actions"
-        aria-expanded={isDropdownOpen}
+        className="absolute top-0 right-0 m-2 text-gray-500 hover:text-gray-700 dark:text-neutral-500 dark:hover:text-neutral-300"
       >
-        <EllipsisVertical size={26} />
+        <EllipsisVertical size={20} />
       </button>
 
-      {/* Dropdown menu */}
       {isDropdownOpen && (
-        <div
-          className="absolute right-0 mt-2 w-48 rounded-md bg-white shadow-lg dark:bg-neutral-800"
-          role="menu"
+        <div 
+          ref={dropdownRef}
+          className="absolute top-8 right-2 z-40 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-dark-secondary dark:ring-white dark:ring-opacity-10"
         >
           <div className="py-1">
-            {/* Edit option */}
             <button
-              className={`flex w-full items-center px-4 py-2 text-sm ${
-                canEditOrDeleteTask() 
-                  ? 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-neutral-700' 
-                  : 'text-gray-400 cursor-not-allowed opacity-50'
-              }`}
-              onClick={handleEditTaskClick}
-              role="menuitem"
+              onClick={() => {
+                handleEditTask(task);
+                setIsDropdownOpen(false);
+              }}
               disabled={!canEditOrDeleteTask()}
+              className={`flex w-full items-center px-4 py-2 text-sm ${
+                canEditOrDeleteTask()
+                  ? 'text-gray-700 hover:bg-gray-100 dark:text-neutral-300 dark:hover:bg-dark-tertiary'
+                  : 'text-gray-300 dark:text-neutral-700 cursor-not-allowed opacity-50'
+              }`}
             >
-              <Pencil className={`mr-2 h-4 w-4 ${
-                canEditOrDeleteTask() ? 'text-blue-500' : 'text-gray-400'
-              }`} />
-              Edit
+              <Pencil size={16} className="mr-2" /> Edit
             </button>
 
-            {/* Delete option */}
             <button
-              className={`flex w-full items-center px-4 py-2 text-sm ${
-                canEditOrDeleteTask() 
-                  ? 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-neutral-700' 
-                  : 'text-gray-400 cursor-not-allowed opacity-50'
-              }`}
               onClick={openConfirmationModal}
-              role="menuitem"
               disabled={!canEditOrDeleteTask()}
+              className={`flex w-full items-center px-4 py-2 text-sm ${
+                canEditOrDeleteTask()
+                  ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20'
+                  : 'text-gray-300 dark:text-neutral-700 cursor-not-allowed opacity-50'
+              }`}
             >
-              <Trash className={`mr-2 h-4 w-4 ${
-                canEditOrDeleteTask() ? 'text-red-500' : 'text-gray-400'
-              }`} />
-              Delete
+              <Trash size={16} className="mr-2" /> Delete
+            </button>
+
+            {/* Placeholder for future menu items */}
+            <div className="border-t border-gray-200 dark:border-neutral-700 my-1" />
+            <button
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-neutral-300 dark:hover:bg-dark-tertiary"
+            >
+              Additional Action
             </button>
           </div>
         </div>
       )}
 
-      {/* Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={isConfirmationModalOpen}
-        onClose={closeConfirmationModal}
-        onConfirm={confirmDeleteTask}
-        title="Delete Task"
-        message="Are you sure you want to delete this task? This action will permanently remove the task and all its associated data."
-        confirmText="Delete"
-        cancelText="Cancel"
-      />
+      {isConfirmationModalOpen && (
+        <ConfirmationModal
+          isOpen={isConfirmationModalOpen}
+          onClose={closeConfirmationModal}
+          onConfirm={confirmDeleteTask}
+          title="Delete Task"
+          message="Are you sure you want to delete this task?"
+          confirmText="Delete"
+          cancelText="Cancel"
+        />
+      )}
     </div>
   );
 };
