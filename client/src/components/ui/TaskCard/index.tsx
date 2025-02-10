@@ -10,12 +10,21 @@ import {
 import { 
   Folder as FolderIcon 
 } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 
 type Props = {
   task: Task;
 };
 
 const TaskCard = ({ task }: Props) => {
+  const router = useRouter();
+
+  const handleProjectClick = () => {
+    if (task.project) {
+      router.push(`/projects/${task.project.id}`);
+    }
+  };
+
   return (
     <div className="mb-3 rounded bg-white p-4 shadow dark:bg-dark-secondary dark:text-white">
       {/* Project Information */}
@@ -25,9 +34,19 @@ const TaskCard = ({ task }: Props) => {
           alignItems="center" 
           gap={1} 
           mb={2}
+          sx={{ 
+            cursor: 'pointer', 
+            '&:hover': { 
+              opacity: 0.7 
+            } 
+          }}
+          onClick={handleProjectClick}
         >
           <FolderIcon color="primary" />
-          <Typography variant="subtitle2">
+          <Typography 
+            variant="subtitle2" 
+            color="primary"
+          >
             Project: {task.project.name}
           </Typography>
         </Box>

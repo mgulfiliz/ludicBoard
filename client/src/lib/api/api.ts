@@ -308,13 +308,29 @@ export const api = createApi({
         CACHE_TAGS.Teams,
       ],
     }),
-    getTasks: build.query<Task[], void>({
-      query: () => 'tasks',
-      providesTags: [CACHE_TAGS.Tasks],
+    getTasks: build.query<Task[], { projectId?: number; userId?: number } | void>({
+      query: (params) => {
+        // If params is undefined or no filters, return all tasks
+        if (!params || (params.projectId === undefined && params.userId === undefined)) {
+          return 'tasks?include=comments.user,assignee,author';
+        }
+
+        const queryParams = new URLSearchParams();
+        if (params.projectId) queryParams.append('projectId', params.projectId.toString());
+        if (params.userId) queryParams.append('userId', params.userId.toString());
+        return `tasks?${queryParams.toString()}&include=comments.user,assignee,author`;
+      },
       transformResponse: (response: Task[]) => response.map(task => ({
         ...task,
         project: task.project || undefined
-      }))
+      })),
+      providesTags: (result) => 
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: CACHE_TAGS.Tasks, id })),
+              { type: CACHE_TAGS.Tasks, id: 'LIST' },
+            ]
+          : [{ type: CACHE_TAGS.Tasks, id: 'LIST' }],
     }),
     getTasksByUser: build.query<Task[], number>({
       query: (userId) => `tasks/user/${userId}`,
