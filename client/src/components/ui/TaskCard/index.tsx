@@ -1,36 +1,38 @@
-import { Task, User } from "@/lib/api/api";
+import { Task, User, Project } from "@/lib/api/api";
 import { format } from "date-fns";
 import Image from "next/image";
 import React from "react";
+import { 
+  Chip, 
+  Typography, 
+  Box 
+} from "@mui/material";
+import { 
+  Folder as FolderIcon 
+} from "@mui/icons-material";
 
 type Props = {
   task: Task;
 };
 
 const TaskCard = ({ task }: Props) => {
-  // Combine author and assignees
-  const allUsers = React.useMemo(() => {
-    const users: (User & { isAuthor?: boolean })[] = [];
-    
-    // Add author first if exists
-    if (task.author) {
-      users.push({ ...task.author, isAuthor: true });
-    }
-
-    // Add assignees, avoiding duplicates
-    const assignedUsers = task.assignees || [];
-
-    assignedUsers.forEach(assignee => {
-      if (!users.some(u => u.userId === assignee.userId)) {
-        users.push({ ...assignee, isAuthor: false });
-      }
-    });
-
-    return users;
-  }, [task]);
-
   return (
     <div className="mb-3 rounded bg-white p-4 shadow dark:bg-dark-secondary dark:text-white">
+      {/* Project Information */}
+      {task.project && (
+        <Box 
+          display="flex" 
+          alignItems="center" 
+          gap={1} 
+          mb={2}
+        >
+          <FolderIcon color="primary" />
+          <Typography variant="subtitle2">
+            Project: {task.project.name}
+          </Typography>
+        </Box>
+      )}
+
       {task.attachments && task.attachments.length > 0 && (
         <div>
           <strong>Attachments:</strong>
@@ -57,14 +59,22 @@ const TaskCard = ({ task }: Props) => {
         <strong>Description:</strong>{" "}
         {task.description || "No description provided"}
       </p>
+      <Box display="flex" gap={1} mb={1}>
+        <Chip 
+          label={task.status || "No Status"} 
+          color="primary" 
+          size="small" 
+          variant="outlined"
+        />
+        <Chip 
+          label={task.priority || "No Priority"} 
+          color="secondary" 
+          size="small" 
+          variant="outlined"
+        />
+      </Box>
       <p>
-        <strong>Status:</strong> {task.status}
-      </p>
-      <p>
-        <strong>Priority:</strong> {task.priority}
-      </p>
-      <p>
-        <strong>Tags:</strong> {task.tags?.join(', ') || "No tags"}
+        <strong>Tags:</strong> {task.tags || "No tags"}
       </p>
       <p>
         <strong>Start Date:</strong>{" "}
@@ -74,33 +84,16 @@ const TaskCard = ({ task }: Props) => {
         <strong>Due Date:</strong>{" "}
         {task.dueDate ? format(new Date(task.dueDate), "P") : "Not set"}
       </p>
-      
-      {/* Users Section */}
-      <div className="mt-2 flex items-center">
-        <strong className="mr-2">Users:</strong>
-        <div className="flex items-center -space-x-2">
-          {allUsers.slice(0, 3).map((user) => (
-            <div key={user.userId} className="relative">
-              <Image 
-                src={user.profilePictureUrl || '/default-avatar.png'} 
-                alt={user.username || 'User Avatar'} 
-                width={32} 
-                height={32} 
-                className="rounded-full border-2 border-white dark:border-dark-secondary"
-                title={`${user.username}${user.isAuthor ? ' (Author)' : ''}`}
-              />
-            </div>
-          ))}
-          {allUsers.length > 3 && (
-            <div 
-              className="w-8 h-8 rounded-full bg-gray-200 dark:bg-dark-tertiary flex items-center justify-center text-xs font-bold text-gray-600 dark:text-white border-2 border-white dark:border-dark-secondary"
-              title={`${allUsers.length - 3} more users`}
-            >
-              +{allUsers.length - 3}
-            </div>
-          )}
-        </div>
-      </div>
+      <p>
+        <strong>Author:</strong>{" "}
+        {task.author ? task.author.username : "Unknown"}
+      </p>
+      <p>
+        <strong>Assignee:</strong>{" "}
+        {task.assignees && task.assignees.length > 0 
+          ? task.assignees.map(a => a.username).join(', ') 
+          : "Unassigned"}
+      </p>
     </div>
   );
 };

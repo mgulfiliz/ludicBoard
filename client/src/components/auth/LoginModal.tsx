@@ -24,7 +24,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         user: {
           userId: response.userId, 
           username: response.username,
-          email: response.email
+          email: response.email,
+          profilePictureUrl: response.profilePictureUrl
         },
         token: response.token
       }));

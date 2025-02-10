@@ -42,14 +42,6 @@ export interface UpdateProfileRequest {
   email?: string;
 }
 
-export interface AuthResponse {
-  userId: number;
-  username: string;
-  email: string;
-  token: string;
-}
-
-// Error Response Type
 export interface ErrorResponse {
   status: 'fail' | 'error';
   message: string;
@@ -95,7 +87,7 @@ export const api = createApi({
   tagTypes: Object.values(CACHE_TAGS),
   endpoints: (build) => ({
     // Authentication Endpoints
-    login: build.mutation<AuthResponse, LoginRequest>({
+    login: build.mutation<User & { token: string }, LoginRequest>({
       query: (credentials) => ({
         url: '/auth/login',
         method: 'POST',
@@ -116,7 +108,7 @@ export const api = createApi({
               userId: data.userId,
               username: data.username,
               email: data.email,
-              profilePictureUrl: undefined
+              profilePictureUrl: data.profilePictureUrl
             }, 
             token: data.token 
           }));
@@ -182,7 +174,7 @@ export const api = createApi({
       }
     }),
 
-    register: build.mutation<AuthResponse, RegisterRequest>({
+    register: build.mutation<User & { token: string }, RegisterRequest>({
       query: (userData) => ({
         url: '/auth/register',
         method: 'POST',
@@ -203,7 +195,7 @@ export const api = createApi({
               userId: data.userId,
               username: data.username,
               email: data.email,
-              profilePictureUrl: undefined
+              profilePictureUrl: data.profilePictureUrl
             }, 
             token: data.token 
           }));
@@ -214,7 +206,7 @@ export const api = createApi({
       invalidatesTags: [CACHE_TAGS.Auth]
     }),
 
-    updateProfile: build.mutation<AuthResponse, UpdateProfileRequest>({
+    updateProfile: build.mutation<User & { token: string }, UpdateProfileRequest>({
       query: (body) => ({
         url: '/auth/update-profile',
         method: 'PATCH',
@@ -230,7 +222,8 @@ export const api = createApi({
               user: {
                 userId: data.userId,
                 username: data.username,
-                email: data.email
+                email: data.email,
+                profilePictureUrl: data.profilePictureUrl
               },
               token: data.token
             })
@@ -315,41 +308,21 @@ export const api = createApi({
         CACHE_TAGS.Teams,
       ],
     }),
-    getTasks: build.query<Task[], { projectId?: number; userId?: number }>({
-      query: (params) => {
-        const queryParams = new URLSearchParams();
-        if (params.projectId) queryParams.append('projectId', params.projectId.toString());
-        if (params.userId) queryParams.append('userId', params.userId.toString());
-        return `tasks?${queryParams.toString()}&include=comments.user,assignee,author`;
-      },
+    getTasks: build.query<Task[], void>({
+      query: () => 'tasks',
+      providesTags: [CACHE_TAGS.Tasks],
       transformResponse: (response: Task[]) => response.map(task => ({
         ...task,
-        comments: (task.comments || []).map(comment => ({
-          ...comment,
-          user: comment.user || { 
-            userId: comment.userId, 
-            username: `User ${comment.userId}`,
-            email: '',
-            profilePictureUrl: undefined 
-          },
-          createdAt: comment.createdAt || new Date().toISOString(),
-          updatedAt: comment.updatedAt || comment.createdAt || new Date().toISOString()
-        }))
-      })),
-      providesTags: (result) => 
-        result
-          ? [
-              ...result.map(({ id }) => ({ type: CACHE_TAGS.Tasks, id })),
-              { type: CACHE_TAGS.Tasks, id: 'LIST' },
-            ]
-          : [{ type: CACHE_TAGS.Tasks, id: 'LIST' }],
+        project: task.project || undefined
+      }))
     }),
     getTasksByUser: build.query<Task[], number>({
       query: (userId) => `tasks/user/${userId}`,
-      providesTags: (result, error, userId) =>
-        result
-          ? result.map(({ id }) => ({ type: CACHE_TAGS.Tasks, id }))
-          : [{ type: CACHE_TAGS.Tasks, id: userId }],
+      providesTags: [CACHE_TAGS.Tasks],
+      transformResponse: (response: Task[]) => response.map(task => ({
+        ...task,
+        project: task.project || undefined
+      }))
     }),
     getTask: build.query<Task, number>({
       query: (taskId) => `tasks/${taskId}?include=comments.user,assignee,author`,
@@ -384,11 +357,11 @@ export const api = createApi({
             : undefined,
         }
       }),
-      invalidatesTags: [CACHE_TAGS.Tasks],
       transformResponse: (response: Task) => ({
-        ...response,
-        createdAt: new Date().toISOString()
+        taskId: response.id,
+        assignedUserIds: response.assignedUserIds || []
       }),
+      invalidatesTags: [CACHE_TAGS.Tasks],
     }),
     updateTask: build.mutation<{ assignedUserIds?: number[] } & Task, { taskId: number; task: Partial<Task> }>({
       query: ({ taskId, task }) => ({

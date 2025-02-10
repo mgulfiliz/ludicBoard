@@ -162,6 +162,7 @@ export const loginUser = async (req: Request, res: Response) => {
       userId: user.userId,
       username: user.username,
       email: user.email,
+      profilePictureUrl: user.profilePictureUrl || undefined,
       token
     });
   } catch (error) {

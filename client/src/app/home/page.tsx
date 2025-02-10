@@ -9,7 +9,15 @@ import {
 } from "@/lib/api/api";
 import React, { useState } from "react";
 import { useAppSelector } from "../redux";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import { 
+  DataGrid, 
+  GridColDef 
+} from "@mui/x-data-grid";
+import { 
+  Button,
+  useMediaQuery,
+  useTheme 
+} from "@mui/material";
 import Header from "@/components/layout/Header";
 import {
   Bar,
@@ -111,7 +119,7 @@ const HomePage = () => {
   };
 
   const handleViewTasks = () => {
-    router.push('/projects');
+    router.push('/tasks');
   };
 
   const handleTeamPerformance = () => {
@@ -240,6 +248,16 @@ const HomePage = () => {
         </div>
         
         <div className="rounded-lg bg-white p-6 shadow dark:bg-dark-secondary md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Recent Tasks</h2>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={handleViewTasks}
+            >
+              View All Tasks
+            </Button>
+          </div>
           <h3 className="mb-4 text-lg font-semibold dark:text-white flex items-center">
             <FileText className="mr-2 h-5 w-5 text-purple-500 dark:text-purple-300" />
             Your Tasks

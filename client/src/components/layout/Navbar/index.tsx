@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Moon, Settings, Sun, Bell, LogIn, UserPlus } from "lucide-react";
+import Image from 'next/image';
+import { Moon, Settings, Sun, Bell, LogIn, UserPlus, User, LogOut } from "lucide-react";
 import { Button } from '@mui/material';
 import { useAppDispatch, useAppSelector } from "@/app/redux";
 import { setIsDarkMode } from "@/lib/api";
@@ -10,8 +11,11 @@ import { clearCredentials } from '@/lib/features/authSlice';
 import LoginModal from '@/components/auth/LoginModal';
 import RegisterModal from '@/components/auth/RegisterModal';
 import { toast } from 'react-toastify';
+import CustomMenu from '@/components/common/CustomMenu';
+import { useRouter } from 'next/navigation';
 
 const Navbar = () => {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const [isMobile, setIsMobile] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -85,19 +89,58 @@ const Navbar = () => {
                 </Link>
 
                 {user ? (
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      Welcome, {user.username}
-                    </span>
-                    <Button 
-                      variant="contained" 
-                      color="error" 
-                      size="small" 
-                      onClick={handleLogout}
-                    >
-                      Logout
-                    </Button>
-                  </div>
+                  <CustomMenu 
+                    buttonLabel={
+                      <div className="flex items-center space-x-2">
+                        {user.profilePictureUrl ? (
+                          <div className="relative w-8 h-8">
+                            <Image
+                              src={`/${user.profilePictureUrl}`}
+                              alt={`${user.username}'s profile`}
+                              fill
+                              className="rounded-full object-cover"
+                              onError={(e) => {
+                                console.error('Profile picture failed to load:', user.profilePictureUrl);
+                                (e.target as HTMLImageElement).src = '/default-avatar.png';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center">
+                            {user.username[0].toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-sm text-gray-600 dark:text-gray-300 hidden md:inline">
+                          {user.username}
+                        </span>
+                      </div>
+                    }
+                    actions={[
+                      {
+                        label: 'Profile',
+                        icon: User,
+                        onClick: () => router.push('/profile'),
+                        variant: 'default'
+                      },
+                      {
+                        label: 'Settings',
+                        icon: Settings,
+                        onClick: () => router.push('/settings'),
+                        variant: 'default'
+                      },
+                      {
+                        label: 'Logout',
+                        icon: LogOut,
+                        onClick: handleLogout,
+                        variant: 'destructive',
+                        confirmationTitle: 'Logout',
+                        confirmationMessage: 'Are you sure you want to log out?'
+                      }
+                    ]}
+                    className="relative"
+                    buttonClassName="flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-neutral-800 p-1 rounded-md"
+                    menuClassName="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white dark:bg-neutral-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                  />
                 ) : (
                   <div className="flex items-center space-x-2">
                     <Button 
